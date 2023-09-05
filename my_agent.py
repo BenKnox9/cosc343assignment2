@@ -1,14 +1,17 @@
-__author__ = "<your name>"
+__author__ = "Ben Knox"
 __organization__ = "COSC343/AIML402, University of Otago"
-__email__ = "<your e-mail>"
+__email__ = "knobe957@student.otago.ac.nz"
 
 import numpy as np
 
 agentName = "<my_agent>"
-trainingSchedule = [("random_agent.py", 5), ("self", 1)]    # Train against random agent for 5 generations,
-                                                            # then against self for 1 generation
+# Train against random agent for 5 generations,
+trainingSchedule = [("random_agent.py", 5), ("self", 1)]
+# then against self for 1 generation
 
 # This is the class for your cleaner/agent
+
+
 class Cleaner:
 
     def __init__(self, nPercepts, nActions, gridSize, maxTurns):
@@ -21,9 +24,52 @@ class Cleaner:
         self.gridSize = gridSize
         self.maxTurns = maxTurns
 
+        # could be in the wrong place, might want it in agent function
+        self.chromosome = self.createInitialChromosome()
 
+    def createInitialChromosome(self):
+        # # Will give negative weightings, not sure if I want this yet
+        # energyRand = np.random.uniform(-1, 1)
+        # binRand = np.random.uniform(-1, 1)
+        # cleanRand = np.random.uniform(-1, 1)
+        # collisionAvoidanceRand = np.random.uniform(-1, 1)
+
+        # # energyRand = np.random(100)
+        # # binRand = np.random(100)
+        # # cleanRand = np.random(100)
+        # # collisionAvoidanceRand = np.random(100)
+
+        # sumRand = abs(energyRand) + abs(binRand) + \
+        #     abs(cleanRand) + abs(collisionAvoidanceRand)
+
+        # energyWeight = energyRand / sumRand
+        # binWeight = binRand / sumRand
+        # cleanWeight = cleanRand / sumRand
+        # collisionAvoidanceWeight = collisionAvoidanceRand / sumRand
+
+        # chromosome = [energyWeight, binWeight,
+        #               cleanWeight, collisionAvoidanceWeight]
+        self.chromosomeDict = {}
+
+        for j in range(4):
+            chromosome = np.random.uniform(-1, 1, size=63)
+            bias = np.random.uniform(-1, 1)
+            # chromosome = np.random.uniform(0, 1, size=63)
+            # bias = np.random.uniform(0, 1)
+
+            full_chromosome = np.concatenate((chromosome, [bias]))
+
+            sum_chromosome = np.sum(full_chromosome)
+
+            self.chromosomeDict[sum_chromosome] = full_chromosome
+
+        chromosome = self.chromosomeDict[max(self.chromosomeDict.keys())]
+
+        return chromosome
 
     def AgentFunction(self, percepts):
+        # preferredActionIndex = np.searchsorted(cumulativeWeights, randomNumber)
+        # selected_value = chromosome[selected_index]
 
         # The percepts are a tuple consisting of four pieces of information
         #
@@ -43,23 +89,40 @@ class Cleaner:
         #          backward movement might fail if it would result in a collision with another robot); fails=0 means
         #          the last action succeeded.
 
-
         visual, energy, bin, fails = percepts
 
         # You can further break down the visual information
 
-        floor_state = visual[:,:,0]   # 3x5 map where -1 indicates dirty square, 0 clean one
-        energy_locations = visual[:,:,1] #3x5 map where 1 indicates the location of energy station, 0 otherwise
-        vertical_bots = visual[:,:,2] # 3x5 map of bots that can in this turn move up or down (from this bot's point of
-                                      # view), -1 if the bot is an enemy, 1 if it is friendly
-        horizontal_bots = visual[:,:,3] # 3x5 map of bots that can in this turn move up or down (from this bot's point
-                                        # of view), -1 if the bot is an enemy, 1 if it is friendly
+        # 3x5 map where -1 indicates dirty square, 0 clean one
+        floor_state = visual[:, :, 0]
+        flat_floor_state = floor_state.flatten()
 
-        #You may combine floor_state and energy_locations if you'd like: floor_state + energy_locations would give you
-        # a mape where -1 indicates dirty square, 0 a clean one, and 1 an energy station.
+        # 3x5 map where 1 indicates the location of energy station, 0 otherwise
+        energy_locations = visual[:, :, 1]
+        flat_energy_locations = energy_locations.flatten()
+
+        # 3x5 map of bots that can in this turn move up or down (from this bot's point of
+        vertical_bots = visual[:, :, 2]
+        flat_vertical_bots = vertical_bots.flatten()
+        # view), -1 if the bot is an enemy, 1 if it is friendly
+
+        # 3x5 map of bots that can in this turn move up or down (from this bot's point
+        horizontal_bots = visual[:, :, 3]
+        flat_horizontal_bots = horizontal_bots.flatten()
+        # of view), -1 if the bot is an enemy, 1 if it is friendly
+
+        self.flattenedVisuals = np.concatenate(
+            (flat_floor_state, flat_energy_locations, flat_vertical_bots, flat_horizontal_bots))
+        self.flattenedVisuals = np.concatenate(
+            (self.flattenedVisuals, [energy, bin, fails]))
+
+        # You may combine floor_state and energy_locations if you'd like: floor_state + energy_locations would give you
+        floor_plus_energy = floor_state + energy_locations
+        # a map where -1 indicates dirty square, 0 a clean one, and 1 an energy station.
 
         # You should implement a model here that translates from 'percepts' to 'actions'
         # through 'self.chromosome'.
+
         #
         # The 'actions' variable must be returned, and it must be a 4-item list or a 4-dim numpy vector
 
@@ -76,15 +139,30 @@ class Cleaner:
         # Different 'self.chromosome' should lead to different 'actions'.  This way different
         # agents can exhibit different behaviour.
 
-        # .
-        # .
-        # .
+        action_vector = list(self.chromosomeDict.keys())
+
+        action_vector = np.zeros(4)  # Initialize action_vector with zeros
+        i = 0
+
+        flattenedWithBias = np.concatenate((self.flattenedVisuals, [1]))
+
+        # Iterate through the values in the dictionary
+        for values in self.chromosomeDict.values():
+            # Perform element-wise multiplication with self.flattenedVisuals
+            new_values = np.array(flattenedWithBias) * np.array(values)
+
+            # Sum the new_values and store it in the action_vector
+            action_vector[i] = np.sum(new_values)
+            i += 1
 
         # Right now this agent ignores percepts and chooses a random action.  Your agents should not
         # perform random actions - your agents' actions should be deterministic from
         # computation based on self.chromosome and percepts
-        action_vector = np.random.randint(low=-100, high=100, size=self.nActions)
+
+        # action_vector = np.random.randint(
+        #     low=-100, high=100, size=self.nActions)
         return action_vector
+
 
 def evalFitness(population):
 
@@ -96,27 +174,56 @@ def evalFitness(population):
     # This loop iterates over your agents in the old population - the purpose of this boilerplate
     # code is to demonstrate how to fetch information from the old_population in order
     # to score fitness of each agent
+
     for n, cleaner in enumerate(population):
-        # cleaner is an instance of the Cleaner class that you implemented above, therefore you can access any attributes
-        # (such as `self.chromosome').  Additionally, each object have 'game_stats' attribute provided by the
-        # game engine, which is a dictionary with the following information on the performance of the cleaner in
-        # the last game:
-        #
-        #  cleaner.game_stats['cleaned'] - int, total number of dirt loads picked up
-        #  cleaner.game_stats['emptied'] - int, total number of dirt loads emptied at a charge station
-        #  cleaner.game_stats['active_turns'] - int, total number of turns the bot was active (non-zero energy)
-        #  cleaner.game_stats['successful_actions'] - int, total number of successful actions performed during active
-        #                                                  turns
-        #  cleaner.game_stats['recharge_count'] - int, number of turns spent at a charging station
-        #  cleaner.game_stats['recharge_energy'] - int, total energy gained from the charging station
-        #  cleaner.game_stats['visits'] - int, total number of squares visited (visiting the same square twice counts
-        #                                      as one visit)
+        stats = cleaner.game_stats
 
-        # This fitness functions considers total number of cleaned squares.  This may NOT be the best fitness function.
-        # You SHOULD consider augmenting it with information from other stats as well.  You DON'T HAVE TO make use
-        # of every stat.
+        # Objective 1: Maximize the number of cleaned squares
+        cleaned_squares = stats['cleaned']
 
-        fitness[n] = cleaner.game_stats['cleaned']
+        # Objective 2: Minimize energy consumption (reward energy efficiency)
+        energy_consumed = stats['recharge_energy']  # Energy gained from charging stations
+        active_turns = stats['active_turns']  # Total turns with non-zero energy
+
+        # Objective 3: Encourage bin emptying
+        emptied_bins = stats['emptied']
+
+        # You can define weights to balance the importance of these objectives
+        weight_cleaned_squares = 1.0
+        weight_energy_efficiency = -0.1  # Negative weight to minimize energy consumption
+        weight_emptied_bins = 0.5
+
+        # Calculate the fitness by combining the objectives
+        fitness[n] = (
+            weight_cleaned_squares * cleaned_squares +
+            weight_energy_efficiency * (1.0 - (energy_consumed / active_turns)) +
+            weight_emptied_bins * emptied_bins
+        )
+
+
+
+
+    # for n, cleaner in enumerate(population):
+    #     # cleaner is an instance of the Cleaner class that you implemented above, therefore you can access any attributes
+    #     # (such as `self.chromosome').  Additionally, each object have 'game_stats' attribute provided by the
+    #     # game engine, which is a dictionary with the following information on the performance of the cleaner in
+    #     # the last game:
+    #     #
+    #     #  cleaner.game_stats['cleaned'] - int, total number of dirt loads picked up
+    #     #  cleaner.game_stats['emptied'] - int, total number of dirt loads emptied at a charge station
+    #     #  cleaner.game_stats['active_turns'] - int, total number of turns the bot was active (non-zero energy)
+    #     #  cleaner.game_stats['successful_actions'] - int, total number of successful actions performed during active
+    #     #                                                  turns
+    #     #  cleaner.game_stats['recharge_count'] - int, number of turns spent at a charging station
+    #     #  cleaner.game_stats['recharge_energy'] - int, total energy gained from the charging station
+    #     #  cleaner.game_stats['visits'] - int, total number of squares visited (visiting the same square twice counts
+    #     #                                      as one visit)
+
+    #     # This fitness functions considers total number of cleaned squares.  This may NOT be the best fitness function.
+    #     # You SHOULD consider augmenting it with information from other stats as well.  You DON'T HAVE TO make use
+    #     # of every stat.
+
+    #     fitness[n] = cleaner.game_stats['cleaned']
 
     return fitness
 
@@ -135,7 +242,6 @@ def newGeneration(old_population):
     nPercepts = old_population[0].nPercepts
     nActions = old_population[0].nActions
     maxTurns = old_population[0].maxTurns
-
 
     fitness = evalFitness(old_population)
 
