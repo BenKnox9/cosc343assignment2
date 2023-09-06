@@ -3,6 +3,7 @@ __organization__ = "COSC343/AIML402, University of Otago"
 __email__ = "knobe957@student.otago.ac.nz"
 
 import numpy as np
+import random
 
 agentName = "<my_agent>"
 # Train against random agent for 5 generations,
@@ -192,7 +193,7 @@ def evalFitness(population):
         # You can define weights to balance the importance of these objectives
         weight_cleaned_squares = 1.0
         weight_emptied_bins = 0.5
-        weight_same_square = -0.7
+        weight_same_square = 0.1
         weight_active_turns = 0.2
 
         fitness[n] = (
@@ -201,6 +202,12 @@ def evalFitness(population):
             weight_same_square * same_square +
             weight_active_turns * active_turns
         )
+
+    # sum_fitness = sum(fitness)
+    # normalized_fitness = [fit / sum_fitness for fit in fitness]
+    # cumulative_distribution = np.cumsum(normalized_fitness)
+    # print("CUMSUM RESULT::: ", cumulative_distribution)
+    # fitness = cumulative_distribution
 
     # for n, cleaner in enumerate(population):
     #     # cleaner is an instance of the Cleaner class that you implemented above, therefore you can access any attributes
@@ -244,11 +251,25 @@ def newGeneration(old_population):
 
     # At this point you should sort the old_population cleaners according to fitness, setting it up for parent
     # selection.
+
     fitness = evalFitness(old_population)
 
+    # # THIS IS TO USE CUMULATIVE FITNESS AND TO NORMALISE TO 1
+    # sum_fitness = sum(fitness)
+    # normalized_fitness = [fit / sum_fitness for fit in fitness]
+    # cumulative_distribution = np.cumsum(normalized_fitness)
+    # print("CUMSUM RESULT::: ", cumulative_distribution)
+    # fitness = cumulative_distribution
+
+    sum_fitness = sum(fitness)
+    new_fitness = []
+
+    for value in fitness:
+        new_fitness.append(value / sum_fitness)
+
+    # NOT SURE IF THIS IS NECESSARY
     population_fitness = list(zip(fitness, old_population))
     population_fitness.sort(reverse=True, key=lambda x: x[0])
-
     # Extract the sorted population (chromosomes only) from the sorted list of tuples
     sorted_fitness = [individual[0] for individual in population_fitness]
     sorted_population = [individual[1] for individual in population_fitness]
@@ -265,6 +286,14 @@ def newGeneration(old_population):
 
         # Here you should modify the new cleaner' chromosome by selecting two parents (based on their
         # fitness) and crossing their chromosome to overwrite new_cleaner.chromosome
+        newParentsIndices = np.random.choice(
+            len(old_population), size=2, replace=False, p=new_fitness)
+        newParent1 = old_population[newParentsIndices[0]].chromosome
+        newParent2 = old_population[newParentsIndices[1]].chromosome
+
+        child = cross_over(newParent1, newParent2)
+        mutatedChild = mutate(child)
+        new_cleaner.chromosome = mutatedChild
 
         # Consider implementing elitism, mutation and various other
         # strategies for producing a new creature.
@@ -280,3 +309,26 @@ def newGeneration(old_population):
     avg_fitness = np.mean(fitness)
 
     return (new_population, avg_fitness)
+
+
+def cross_over(parent1, parent2):
+    uniform_crossover = [random.randint(0, 1) for _ in range(len(parent1))]
+    newChild = []
+
+    for i in range(len(parent1)):
+        if uniform_crossover[i] == 1:
+            newChild.append(parent1[i])
+        else:
+            newChild.append(parent2[i])
+    # print("new child: ", newChild)
+    return newChild
+
+
+def mutate(child):
+    mutateLevel = 0.09
+    random_decimal = round(random.uniform(0, 1), 2)
+    if random_decimal < mutateLevel:
+        k = random.randint(0, 63)
+        v = np.random(0, 1)
+        child[k] = v
+    return child
