@@ -19,7 +19,7 @@ game_settings = {
     "nCleaners": 8,
 
     # Number of turns per game
-    "nTurns": 100,
+    "nTurns": 25,
 
     # Speed of visualisation ('slow','normal','fast')
     "visSpeed": 'normal',

@@ -56,11 +56,8 @@ class Cleaner:
             bias = np.random.uniform(-1, 1)
             # chromosome = np.random.uniform(0, 1, size=63)
             # bias = np.random.uniform(0, 1)
-
             full_chromosome = np.concatenate((chromosome, [bias]))
-
             sum_chromosome = np.sum(full_chromosome)
-
             self.chromosomeDict[sum_chromosome] = full_chromosome
 
         chromosome = self.chromosomeDict[max(self.chromosomeDict.keys())]
@@ -182,26 +179,28 @@ def evalFitness(population):
         cleaned_squares = stats['cleaned']
 
         # Objective 2: Minimize energy consumption (reward energy efficiency)
-        energy_consumed = stats['recharge_energy']  # Energy gained from charging stations
-        active_turns = stats['active_turns']  # Total turns with non-zero energy
+        # Energy gained from charging stations
+        energy_consumed = stats['recharge_energy']
+        # Total turns with non-zero energy
+        active_turns = stats['active_turns']
+
+        same_square = stats['visits']
 
         # Objective 3: Encourage bin emptying
         emptied_bins = stats['emptied']
 
         # You can define weights to balance the importance of these objectives
         weight_cleaned_squares = 1.0
-        weight_energy_efficiency = -0.1  # Negative weight to minimize energy consumption
         weight_emptied_bins = 0.5
+        weight_same_square = -0.7
+        weight_active_turns = 0.2
 
-        # Calculate the fitness by combining the objectives
         fitness[n] = (
             weight_cleaned_squares * cleaned_squares +
-            weight_energy_efficiency * (1.0 - (energy_consumed / active_turns)) +
-            weight_emptied_bins * emptied_bins
+            weight_emptied_bins * emptied_bins +
+            weight_same_square * same_square +
+            weight_active_turns * active_turns
         )
-
-
-
 
     # for n, cleaner in enumerate(population):
     #     # cleaner is an instance of the Cleaner class that you implemented above, therefore you can access any attributes
@@ -243,13 +242,19 @@ def newGeneration(old_population):
     nActions = old_population[0].nActions
     maxTurns = old_population[0].maxTurns
 
-    fitness = evalFitness(old_population)
-
     # At this point you should sort the old_population cleaners according to fitness, setting it up for parent
     # selection.
-    # .
-    # .
-    # .
+    fitness = evalFitness(old_population)
+
+    population_fitness = list(zip(fitness, old_population))
+    population_fitness.sort(reverse=True, key=lambda x: x[0])
+
+    # Extract the sorted population (chromosomes only) from the sorted list of tuples
+    sorted_fitness = [individual[0] for individual in population_fitness]
+    sorted_population = [individual[1] for individual in population_fitness]
+
+    print("SORTED FITNESS", sorted_fitness)
+    # print("SORTED POPULATION", sorted_population[0].chromosome)
 
     # Create new population list...
     new_population = list()
