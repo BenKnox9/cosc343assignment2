@@ -13,13 +13,13 @@ game_settings = {
     "player2": "random_agent.py",
 
     # Size of the game grid (Y,X)
-    "gridSize": (11, 11),
+    "gridSize": (21, 21),
 
     # Number of vacuum cleaners
-    "nCleaners": 8,
+    "nCleaners": 20,
 
     # Number of turns per game
-    "nTurns": 25,
+    "nTurns": 50,
 
     # Speed of visualisation ('slow','normal','fast')
     "visSpeed": 'normal',

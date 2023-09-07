@@ -7,7 +7,7 @@ import random
 
 agentName = "<my_agent>"
 # Train against random agent for 5 generations,
-trainingSchedule = [("random_agent.py", 5), ("self", 1)]
+trainingSchedule = [("random_agent.py", 100), ("self", 50)]
 # then against self for 1 generation
 
 # This is the class for your cleaner/agent
@@ -29,46 +29,14 @@ class Cleaner:
         self.chromosome = self.createInitialChromosome()
 
     def createInitialChromosome(self):
-        # # Will give negative weightings, not sure if I want this yet
-        # energyRand = np.random.uniform(-1, 1)
-        # binRand = np.random.uniform(-1, 1)
-        # cleanRand = np.random.uniform(-1, 1)
-        # collisionAvoidanceRand = np.random.uniform(-1, 1)
+        chromosome = np.empty(256)
 
-        # # energyRand = np.random(100)
-        # # binRand = np.random(100)
-        # # cleanRand = np.random(100)
-        # # collisionAvoidanceRand = np.random(100)
-
-        # sumRand = abs(energyRand) + abs(binRand) + \
-        #     abs(cleanRand) + abs(collisionAvoidanceRand)
-
-        # energyWeight = energyRand / sumRand
-        # binWeight = binRand / sumRand
-        # cleanWeight = cleanRand / sumRand
-        # collisionAvoidanceWeight = collisionAvoidanceRand / sumRand
-
-        # chromosome = [energyWeight, binWeight,
-        #               cleanWeight, collisionAvoidanceWeight]
-        self.chromosomeDict = {}
-
-        for j in range(4):
-            chromosome = np.random.uniform(-1, 1, size=63)
-            bias = np.random.uniform(-1, 1)
-            # chromosome = np.random.uniform(0, 1, size=63)
-            # bias = np.random.uniform(0, 1)
-            full_chromosome = np.concatenate((chromosome, [bias]))
-            sum_chromosome = np.sum(full_chromosome)
-            self.chromosomeDict[sum_chromosome] = full_chromosome
-
-        chromosome = self.chromosomeDict[max(self.chromosomeDict.keys())]
+        for i in range(256):
+            chromosome[i] = np.random.uniform(-1, 1)
 
         return chromosome
 
     def AgentFunction(self, percepts):
-        # preferredActionIndex = np.searchsorted(cumulativeWeights, randomNumber)
-        # selected_value = chromosome[selected_index]
-
         # The percepts are a tuple consisting of four pieces of information
         #
         # visual - it information of the 3x5 grid of the squares in front and to the side of the cleaner; this variable
@@ -100,14 +68,14 @@ class Cleaner:
         flat_energy_locations = energy_locations.flatten()
 
         # 3x5 map of bots that can in this turn move up or down (from this bot's point of
+        # view), -1 if the bot is an enemy, 1 if it is friendly
         vertical_bots = visual[:, :, 2]
         flat_vertical_bots = vertical_bots.flatten()
-        # view), -1 if the bot is an enemy, 1 if it is friendly
 
         # 3x5 map of bots that can in this turn move up or down (from this bot's point
+        # of view), -1 if the bot is an enemy, 1 if it is friendly
         horizontal_bots = visual[:, :, 3]
         flat_horizontal_bots = horizontal_bots.flatten()
-        # of view), -1 if the bot is an enemy, 1 if it is friendly
 
         self.flattenedVisuals = np.concatenate(
             (flat_floor_state, flat_energy_locations, flat_vertical_bots, flat_horizontal_bots))
@@ -136,22 +104,20 @@ class Cleaner:
         #
         # Different 'self.chromosome' should lead to different 'actions'.  This way different
         # agents can exhibit different behaviour.
+        self.flattenedWithBias = np.concatenate((self.flattenedVisuals, [1]))
 
-        action_vector = list(self.chromosomeDict.keys())
+        # Split the chromosome into four equal parts
+        part_size = len(self.chromosome) // 4
+        chromosome_parts = [
+            self.chromosome[i * part_size:(i + 1) * part_size] for i in range(4)]
 
-        action_vector = np.zeros(4)  # Initialize action_vector with zeros
-        i = 0
+        # Initialize an action vector with zeros
+        action_vector = np.zeros(4)
 
-        flattenedWithBias = np.concatenate((self.flattenedVisuals, [1]))
-
-        # Iterate through the values in the dictionary
-        for values in self.chromosomeDict.values():
-            # Perform element-wise multiplication with self.flattenedVisuals
-            new_values = np.array(flattenedWithBias) * np.array(values)
-
-            # Sum the new_values and store it in the action_vector
-            action_vector[i] = np.sum(new_values)
-            i += 1
+        # Iterate through the four chromosome parts and calculate the sum of element-wise products
+        for i in range(4):
+            part_sum = np.sum(chromosome_parts[i] * self.flattenedWithBias)
+            action_vector[i] = part_sum
 
         # Right now this agent ignores percepts and chooses a random action.  Your agents should not
         # perform random actions - your agents' actions should be deterministic from
@@ -176,38 +142,41 @@ def evalFitness(population):
     for n, cleaner in enumerate(population):
         stats = cleaner.game_stats
 
-        # Objective 1: Maximize the number of cleaned squares
         cleaned_squares = stats['cleaned']
-
-        # Objective 2: Minimize energy consumption (reward energy efficiency)
-        # Energy gained from charging stations
-        energy_consumed = stats['recharge_energy']
-        # Total turns with non-zero energy
+        emptied_bins = stats['emptied']
         active_turns = stats['active_turns']
+        successful_actions = stats['successful_actions']
 
+        recharge_count = stats['recharge_count']
+        recharge_energy = stats['recharge_energy']
         same_square = stats['visits']
 
-        # Objective 3: Encourage bin emptying
-        emptied_bins = stats['emptied']
-
         # You can define weights to balance the importance of these objectives
-        weight_cleaned_squares = 1.0
-        weight_emptied_bins = 0.5
-        weight_same_square = 0.1
-        weight_active_turns = 0.2
+        weight_cleaned_squares = 13  # new square
+        weight_emptied_bins = 7
+        weight_active_turns = 6
+        weight_successful_actions = 4
 
-        fitness[n] = (
-            weight_cleaned_squares * cleaned_squares +
-            weight_emptied_bins * emptied_bins +
-            weight_same_square * same_square +
-            weight_active_turns * active_turns
-        )
+        weight_recharge_count = 6
+        weight_recharge_energy = 0
+        weight_same_square = 4  # new square
 
-    # sum_fitness = sum(fitness)
-    # normalized_fitness = [fit / sum_fitness for fit in fitness]
-    # cumulative_distribution = np.cumsum(normalized_fitness)
-    # print("CUMSUM RESULT::: ", cumulative_distribution)
-    # fitness = cumulative_distribution
+        if cleaned_squares > 3:
+            fitness += 30
+
+        if same_square < 3 or cleaned_squares == 0:
+            fitness[n] = 1
+        else:
+            fitness[n] = (
+                weight_cleaned_squares * cleaned_squares +
+                weight_emptied_bins * emptied_bins +
+                weight_active_turns * active_turns +
+                weight_successful_actions * successful_actions +
+
+                weight_recharge_count * recharge_count +
+                weight_recharge_energy * recharge_energy +
+                weight_same_square * same_square
+            )
 
     # for n, cleaner in enumerate(population):
     #     # cleaner is an instance of the Cleaner class that you implemented above, therefore you can access any attributes
@@ -254,28 +223,14 @@ def newGeneration(old_population):
 
     fitness = evalFitness(old_population)
 
-    # # THIS IS TO USE CUMULATIVE FITNESS AND TO NORMALISE TO 1
-    # sum_fitness = sum(fitness)
-    # normalized_fitness = [fit / sum_fitness for fit in fitness]
-    # cumulative_distribution = np.cumsum(normalized_fitness)
-    # print("CUMSUM RESULT::: ", cumulative_distribution)
-    # fitness = cumulative_distribution
+    num_elite = 2  # Number of top-performing individuals to preserve as elite
+    elite_indices = np.argsort(fitness)[-num_elite:]
 
     sum_fitness = sum(fitness)
     new_fitness = []
 
     for value in fitness:
         new_fitness.append(value / sum_fitness)
-
-    # NOT SURE IF THIS IS NECESSARY
-    population_fitness = list(zip(fitness, old_population))
-    population_fitness.sort(reverse=True, key=lambda x: x[0])
-    # Extract the sorted population (chromosomes only) from the sorted list of tuples
-    sorted_fitness = [individual[0] for individual in population_fitness]
-    sorted_population = [individual[1] for individual in population_fitness]
-
-    print("SORTED FITNESS", sorted_fitness)
-    # print("SORTED POPULATION", sorted_population[0].chromosome)
 
     # Create new population list...
     new_population = list()
@@ -284,16 +239,20 @@ def newGeneration(old_population):
         # Create a new cleaner
         new_cleaner = Cleaner(nPercepts, nActions, gridSize, maxTurns)
 
-        # Here you should modify the new cleaner' chromosome by selecting two parents (based on their
-        # fitness) and crossing their chromosome to overwrite new_cleaner.chromosome
-        newParentsIndices = np.random.choice(
-            len(old_population), size=2, replace=False, p=new_fitness)
-        newParent1 = old_population[newParentsIndices[0]].chromosome
-        newParent2 = old_population[newParentsIndices[1]].chromosome
+        # Elitism
+        if n in elite_indices:
+            new_cleaner.chromosome = old_population[n].chromosome
+        else:
+            # Here you should modify the new cleaner' chromosome by selecting two parents (based on their
+            # fitness) and crossing their chromosome to overwrite new_cleaner.chromosome
+            newParentsIndices = np.random.choice(
+                len(old_population), size=2, replace=False, p=new_fitness)
+            newParent1 = old_population[newParentsIndices[0]].chromosome
+            newParent2 = old_population[newParentsIndices[1]].chromosome
 
-        child = cross_over(newParent1, newParent2)
-        mutatedChild = mutate(child)
-        new_cleaner.chromosome = mutatedChild
+            child = cross_over(newParent1, newParent2)
+            mutatedChild = mutate(child)
+            new_cleaner.chromosome = mutatedChild
 
         # Consider implementing elitism, mutation and various other
         # strategies for producing a new creature.
@@ -311,24 +270,46 @@ def newGeneration(old_population):
     return (new_population, avg_fitness)
 
 
+# Random selection cross over
+# def cross_over(parent1, parent2):
+#     uniform_crossover = [random.randint(0, 1) for _ in range(len(parent1))]
+#     newChild = []
+#     for i in range(len(parent1)):
+#         if uniform_crossover[i] == 1:
+#             newChild.append(parent1[i])
+#         else:
+#             newChild.append(parent2[i])
+#     return newChild
+
+# Random point cross over
 def cross_over(parent1, parent2):
-    uniform_crossover = [random.randint(0, 1) for _ in range(len(parent1))]
+    firstSplit = random.randint(0, 255)
+    secondSplit = random.randint(0, 255)
     newChild = []
 
+    while firstSplit == secondSplit:
+        firstSplit = random.randint(0, 255)
+
+    if firstSplit > secondSplit:
+        placeHolder = firstSplit
+        firstSplit = secondSplit
+        secondSplit = placeHolder
+
     for i in range(len(parent1)):
-        if uniform_crossover[i] == 1:
+        if i < firstSplit:
             newChild.append(parent1[i])
-        else:
+        elif i < secondSplit:
             newChild.append(parent2[i])
-    # print("new child: ", newChild)
+        else:
+            newChild.append(parent1[i])
     return newChild
 
 
 def mutate(child):
-    mutateLevel = 0.09
+    mutateLevel = 0.1
     random_decimal = round(random.uniform(0, 1), 2)
     if random_decimal < mutateLevel:
-        k = random.randint(0, 63)
-        v = np.random(0, 1)
+        k = random.randint(0, 255)
+        v = np.random.uniform(-1, 1)
         child[k] = v
     return child
