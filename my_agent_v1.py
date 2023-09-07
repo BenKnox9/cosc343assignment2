@@ -7,7 +7,7 @@ import random
 
 agentName = "<my_agent>"
 # Train against random agent for 5 generations,
-trainingSchedule = [("random_agent.py", 300), ("self", 200)]
+trainingSchedule = [("random_agent.py", 100), ("self", 50)]
 # then against self for 1 generation
 
 # This is the class for your cleaner/agent
@@ -29,9 +29,9 @@ class Cleaner:
         self.chromosome = self.createInitialChromosome()
 
     def createInitialChromosome(self):
-        chromosome = np.empty(244)
+        chromosome = np.empty(256)
 
-        for i in range(244):
+        for i in range(256):
             chromosome[i] = np.random.uniform(-1, 1)
 
         return chromosome
@@ -79,6 +79,8 @@ class Cleaner:
 
         self.flattenedVisuals = np.concatenate(
             (flat_floor_state, flat_energy_locations, flat_vertical_bots, flat_horizontal_bots))
+        self.flattenedVisuals = np.concatenate(
+            (self.flattenedVisuals, [energy, bin, fails]))
 
         # You may combine floor_state and energy_locations if you'd like: floor_state + energy_locations would give you
         floor_plus_energy = floor_state + energy_locations
@@ -150,17 +152,17 @@ def evalFitness(population):
         same_square = stats['visits']
 
         # You can define weights to balance the importance of these objectives
-        weight_cleaned_squares = 9  # new square
-        weight_emptied_bins = 8
-        weight_active_turns = 5
-        weight_successful_actions = 2
+        weight_cleaned_squares = 13  # new square
+        weight_emptied_bins = 7
+        weight_active_turns = 6
+        weight_successful_actions = 4
 
-        weight_recharge_count = 2
+        weight_recharge_count = 6
         weight_recharge_energy = 0
-        weight_same_square = 5  # new square
+        weight_same_square = 4  # new square
 
-        if cleaned_squares > 6:
-            fitness += 60
+        if cleaned_squares > 3:
+            fitness += 30
 
         if same_square < 3 or cleaned_squares == 0:
             fitness[n] = 1
@@ -169,7 +171,7 @@ def evalFitness(population):
                 weight_cleaned_squares * cleaned_squares +
                 weight_emptied_bins * emptied_bins +
                 weight_active_turns * active_turns +
-                weight_successful_actions * successful_actions -
+                weight_successful_actions * successful_actions +
 
                 weight_recharge_count * recharge_count +
                 weight_recharge_energy * recharge_energy +
@@ -281,12 +283,12 @@ def newGeneration(old_population):
 
 # Random point cross over
 def cross_over(parent1, parent2):
-    firstSplit = random.randint(0, 243)
-    secondSplit = random.randint(0, 243)
+    firstSplit = random.randint(0, 255)
+    secondSplit = random.randint(0, 255)
     newChild = []
 
     while firstSplit == secondSplit:
-        firstSplit = random.randint(0, 243)
+        firstSplit = random.randint(0, 255)
 
     if firstSplit > secondSplit:
         placeHolder = firstSplit
@@ -307,7 +309,7 @@ def mutate(child):
     mutateLevel = 0.1
     random_decimal = round(random.uniform(0, 1), 2)
     if random_decimal < mutateLevel:
-        k = random.randint(0, 239)
+        k = random.randint(0, 255)
         v = np.random.uniform(-1, 1)
         child[k] = v
     return child
