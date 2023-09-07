@@ -7,7 +7,7 @@ import random
 
 agentName = "<my_agent>"
 # Train against random agent for 5 generations,
-trainingSchedule = [("random_agent.py", 100), ("self", 50)]
+trainingSchedule = [("random_agent.py", 300), ("self", 200)]
 # then against self for 1 generation
 
 # This is the class for your cleaner/agent
@@ -29,9 +29,9 @@ class Cleaner:
         self.chromosome = self.createInitialChromosome()
 
     def createInitialChromosome(self):
-        chromosome = np.empty(21)
+        chromosome = np.empty(244)
 
-        for i in range(21):
+        for i in range(244):
             chromosome[i] = np.random.uniform(-1, 1)
 
         return chromosome
@@ -79,48 +79,13 @@ class Cleaner:
 
         self.flattenedVisuals = np.concatenate(
             (flat_floor_state, flat_energy_locations, flat_vertical_bots, flat_horizontal_bots))
-        self.flattenedVisuals = np.concatenate(
-            (self.flattenedVisuals, [energy, bin, fails]))
 
         # You may combine floor_state and energy_locations if you'd like: floor_state + energy_locations would give you
         floor_plus_energy = floor_state + energy_locations
         # a map where -1 indicates dirty square, 0 a clean one, and 1 an energy station.
 
-        front_percep = floor_plus_energy[0:-1, 1:-1]
-
-        left_column = floor_plus_energy[:, 0]
-        bottom_left_corner = floor_plus_energy[2, 1]
-        left_percep = np.concatenate((left_column, [bottom_left_corner]))
-
-        right_column = floor_plus_energy[:, -1]
-        bottom_right_corner = floor_plus_energy[2, 3]
-        right_percep = np.concatenate((right_column, [bottom_right_corner]))
-
-        back_percep = np.array(
-            [vertical_bots[0, 2], horizontal_bots[1, 1], horizontal_bots[1, 3]])
-
         # You should implement a model here that translates from 'percepts' to 'actions'
         # through 'self.chromosome'.
-
-        # TRY ADDING BIAS AFTER NORMALISING
-        move_forward_array = np.concatenate(
-            (front_percep.flatten() * self.chromosome[:6], [self.chromosome[6]]))
-
-        turn_left_array = np.concatenate(
-            (left_percep * self.chromosome[7:11], [self.chromosome[11]]))
-
-        turn_right_array = np.concatenate(
-            (right_percep * self.chromosome[12:16], [self.chromosome[16]]))
-
-        move_back_array = np.concatenate(
-            (back_percep * self.chromosome[17: 20], [self.chromosome[20]]))
-
-        action_vector = np.zeros(4)
-
-        action_vector = np.array([np.sum(move_forward_array) / 6,
-                                  np.sum(turn_right_array) / 4,
-                                  np.sum(turn_left_array) / 4,
-                                  np.sum(move_back_array) / 8])
 
         #
         # The 'actions' variable must be returned, and it must be a 4-item list or a 4-dim numpy vector
@@ -137,6 +102,21 @@ class Cleaner:
         #
         # Different 'self.chromosome' should lead to different 'actions'.  This way different
         # agents can exhibit different behaviour.
+        self.flattenedWithBias = np.concatenate((self.flattenedVisuals, [1]))
+
+        # Split the chromosome into four equal parts
+        part_size = len(self.chromosome) // 4
+        chromosome_parts = [
+            self.chromosome[i * part_size:(i + 1) * part_size] for i in range(4)]
+
+        # Initialize an action vector with zeros
+        action_vector = np.zeros(4)
+
+        # Iterate through the four chromosome parts and calculate the sum of element-wise products
+        for i in range(4):
+            part_sum = np.sum(chromosome_parts[i] * self.flattenedWithBias)
+            action_vector[i] = part_sum
+
         # Right now this agent ignores percepts and chooses a random action.  Your agents should not
         # perform random actions - your agents' actions should be deterministic from
         # computation based on self.chromosome and percepts
@@ -170,14 +150,17 @@ def evalFitness(population):
         same_square = stats['visits']
 
         # You can define weights to balance the importance of these objectives
-        weight_cleaned_squares = 13  # new square
-        weight_emptied_bins = 9
-        weight_active_turns = 6
-        weight_successful_actions = 4
+        weight_cleaned_squares = 9  # new square
+        weight_emptied_bins = 8
+        weight_active_turns = 5
+        weight_successful_actions = 2
 
-        weight_recharge_count = 8
+        weight_recharge_count = 2
         weight_recharge_energy = 0
-        weight_same_square = 4  # new square
+        weight_same_square = 5  # new square
+
+        if cleaned_squares > 6:
+            fitness += 60
 
         if same_square < 3 or cleaned_squares == 0:
             fitness[n] = 1
@@ -186,15 +169,13 @@ def evalFitness(population):
                 weight_cleaned_squares * cleaned_squares +
                 weight_emptied_bins * emptied_bins +
                 weight_active_turns * active_turns +
-                weight_successful_actions * successful_actions +
+                weight_successful_actions * successful_actions -
 
                 weight_recharge_count * recharge_count +
                 weight_recharge_energy * recharge_energy +
                 weight_same_square * same_square
             )
 
-        if cleaned_squares > 5:
-            fitness += 50
     # for n, cleaner in enumerate(population):
     #     # cleaner is an instance of the Cleaner class that you implemented above, therefore you can access any attributes
     #     # (such as `self.chromosome').  Additionally, each object have 'game_stats' attribute provided by the
@@ -300,12 +281,12 @@ def newGeneration(old_population):
 
 # Random point cross over
 def cross_over(parent1, parent2):
-    firstSplit = random.randint(0, 20)
-    secondSplit = random.randint(0, 20)
+    firstSplit = random.randint(0, 243)
+    secondSplit = random.randint(0, 243)
     newChild = []
 
     while firstSplit == secondSplit:
-        firstSplit = random.randint(0, 20)
+        firstSplit = random.randint(0, 243)
 
     if firstSplit > secondSplit:
         placeHolder = firstSplit
@@ -323,10 +304,10 @@ def cross_over(parent1, parent2):
 
 
 def mutate(child):
-    mutateLevel = 0.05
+    mutateLevel = 0.1
     random_decimal = round(random.uniform(0, 1), 2)
     if random_decimal < mutateLevel:
-        k = random.randint(0, 20)
+        k = random.randint(0, 239)
         v = np.random.uniform(-1, 1)
         child[k] = v
     return child

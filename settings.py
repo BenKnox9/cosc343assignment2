@@ -7,19 +7,19 @@ __email__ = "lech.szymanski@otago.ac.nz"
 game_settings = {
 
     # File implementing the agent playing as player 1
-    "player1": "my_agent_v1.py",
+    "player1": "my_agent.py",
 
     # File implementing the agent playing as player 2
     "player2": "random_agent.py",
 
     # Size of the game grid (Y,X)
-    "gridSize": (41, 41),
+    "gridSize": (21, 21),
 
     # Number of vacuum cleaners
-    "nCleaners": 40,
+    "nCleaners": 20,
 
     # Number of turns per game
-    "nTurns": 100,
+    "nTurns": 50,
 
     # Speed of visualisation ('slow','normal','fast')
     "visSpeed": 'normal',
