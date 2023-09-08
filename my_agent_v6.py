@@ -29,9 +29,9 @@ class Cleaner:
         self.chromosome = self.createInitialChromosome()
 
     def createInitialChromosome(self):
-        chromosome = np.empty(25)
+        chromosome = np.empty(26)
 
-        for i in range(25):
+        for i in range(26):
             chromosome[i] = np.random.uniform(-2, 2)
 
         return chromosome
@@ -86,15 +86,17 @@ class Cleaner:
         floor_plus_energy = floor_state + energy_locations
         # a map where -1 indicates dirty square, 0 a clean one, and 1 an energy station.
 
-        front_percep = floor_plus_energy[0:-1, 1:-1]
+        top_middle = floor_plus_energy[0, 1:4]
+        middle_value = floor_plus_energy[1, 2]
+        front_percep = np.concatenate((top_middle, [middle_value]))
 
         left_column = floor_plus_energy[:, 0]
-        bottom_left_corner = floor_plus_energy[2, 1]
-        left_percep = np.concatenate((left_column, [bottom_left_corner]))
+        bottom_left_corner = floor_plus_energy[1:3, 1]
+        left_percep = np.concatenate((left_column, bottom_left_corner))
 
         right_column = floor_plus_energy[:, -1]
-        bottom_right_corner = floor_plus_energy[2, 3]
-        right_percep = np.concatenate((right_column, [bottom_right_corner]))
+        bottom_right_corner = floor_plus_energy[1:3, 3]
+        right_percep = np.concatenate((right_column, bottom_right_corner))
 
         back_percep = np.array(
             [vertical_bots[0, 2], horizontal_bots[1, 1], horizontal_bots[1, 3]])
@@ -104,13 +106,13 @@ class Cleaner:
 
         # TRY ADDING BIAS AFTER NORMALISING
         move_forward_array = np.concatenate(
-            (front_percep.flatten() * self.chromosome[:6], [self.chromosome[6]]))
+            (front_percep.flatten() * self.chromosome[:4], [self.chromosome[4]]))
 
         turn_left_array = np.concatenate(
-            (left_percep * self.chromosome[7:11], [self.chromosome[11]]))
+            (left_percep * self.chromosome[5:10], [self.chromosome[10]]))
 
         turn_right_array = np.concatenate(
-            (right_percep * self.chromosome[12:16], [self.chromosome[16]]))
+            (right_percep * self.chromosome[11:16], [self.chromosome[16]]))
 
         move_back_array = np.concatenate(
             (back_percep * self.chromosome[17: 20], [self.chromosome[20]]))
@@ -119,16 +121,16 @@ class Cleaner:
 
         action_vector = np.array([np.sum(move_forward_array) +
                                   np.sum(
-                                      energy_locations[0:-1, 1:-1] * ((self.chromosome[21] * self.chromosome[23]) / energy) * (self.chromosome[24] / (bin + 1))),
+                                      energy_locations[0:-1, 1:-1] * ((self.chromosome[21]) / energy) * ((self.chromosome[24] * self.chromosome[25]) / (bin + 1))),
                                   np.sum(turn_right_array) +
-                                  np.sum(energy_locations[:, 0] * ((self.chromosome[21] * self.chromosome[23]) / energy) * (self.chromosome[24] / (bin + 1))) +
+                                  np.sum(energy_locations[:, 0] * ((self.chromosome[21]) / energy) * ((self.chromosome[24] * self.chromosome[25]) / (bin + 1))) +
                                   np.sum(
-                                      energy_locations[2, 1] * ((self.chromosome[21] * self.chromosome[23]) / energy) * (self.chromosome[24] / (bin + 1))) +
+                                      energy_locations[2, 1] * ((self.chromosome[21]) / energy) * ((self.chromosome[24] * self.chromosome[25]) / (bin + 1))) +
                                   self.chromosome[22] * fails,
                                   np.sum(turn_left_array) +
-                                  np.sum(energy_locations[:, -1] * ((self.chromosome[21] * self.chromosome[23]) / energy) * (self.chromosome[24] / (bin + 1))) +
+                                  np.sum(energy_locations[:, -1] * ((self.chromosome[21]) / energy) * ((self.chromosome[24] * self.chromosome[25]) / (bin + 1))) +
                                   np.sum(
-                                      energy_locations[2, 3] * ((self.chromosome[21] * self.chromosome[23]) / energy) * (self.chromosome[24] / (bin + 1))) +
+                                      energy_locations[2, 3] * ((self.chromosome[21]) / energy) * ((self.chromosome[24] * self.chromosome[25]) / (bin + 1))) +
                                   self.chromosome[22] * fails,
                                   #   np.sum(move_back_array) + self.chromosome[22] * fails])
                                   -10])
@@ -181,7 +183,7 @@ def evalFitness(population):
         different_squares = stats['visits']
 
         # You can define weights to balance the importance of these objectives
-        weight_cleaned_squares = 15  # new square
+        weight_cleaned_squares = 16  # new square
         weight_emptied_bins = 9
         weight_active_turns = 8
         weight_successful_actions = 8
@@ -251,7 +253,7 @@ def newGeneration(old_population):
 
     fitness = evalFitness(old_population)
 
-    num_elite = 6  # Number of top-performing individuals to preserve as elite
+    num_elite = 4  # Number of top-performing individuals to preserve as elite
     elite_indices = np.argsort(fitness)[-num_elite:]
 
     sum_fitness = sum(fitness)

@@ -29,9 +29,9 @@ class Cleaner:
         self.chromosome = self.createInitialChromosome()
 
     def createInitialChromosome(self):
-        chromosome = np.empty(25)
+        chromosome = np.empty(26)
 
-        for i in range(25):
+        for i in range(26):
             chromosome[i] = np.random.uniform(-2, 2)
 
         return chromosome
@@ -119,16 +119,16 @@ class Cleaner:
 
         action_vector = np.array([np.sum(move_forward_array) +
                                   np.sum(
-                                      energy_locations[0:-1, 1:-1] * ((self.chromosome[21] * self.chromosome[23]) / energy) * (self.chromosome[24] / (bin + 1))),
+                                      energy_locations[0:-1, 1:-1] * ((self.chromosome[21]) / energy) * ((self.chromosome[24] * self.chromosome[25]) / (bin + 1))),
                                   np.sum(turn_right_array) +
-                                  np.sum(energy_locations[:, 0] * ((self.chromosome[21] * self.chromosome[23]) / energy) * (self.chromosome[24] / (bin + 1))) +
+                                  np.sum(energy_locations[:, 0] * ((self.chromosome[21]) / energy) * ((self.chromosome[24] * self.chromosome[25]) / (bin + 1))) +
                                   np.sum(
-                                      energy_locations[2, 1] * ((self.chromosome[21] * self.chromosome[23]) / energy) * (self.chromosome[24] / (bin + 1))) +
+                                      energy_locations[2, 1] * ((self.chromosome[21]) / energy) * ((self.chromosome[24] * self.chromosome[25]) / (bin + 1))) +
                                   self.chromosome[22] * fails,
                                   np.sum(turn_left_array) +
-                                  np.sum(energy_locations[:, -1] * ((self.chromosome[21] * self.chromosome[23]) / energy) * (self.chromosome[24] / (bin + 1))) +
+                                  np.sum(energy_locations[:, -1] * ((self.chromosome[21]) / energy) * ((self.chromosome[24] * self.chromosome[25]) / (bin + 1))) +
                                   np.sum(
-                                      energy_locations[2, 3] * ((self.chromosome[21] * self.chromosome[23]) / energy) * (self.chromosome[24] / (bin + 1))) +
+                                      energy_locations[2, 3] * ((self.chromosome[21]) / energy) * ((self.chromosome[24] * self.chromosome[25]) / (bin + 1))) +
                                   self.chromosome[22] * fails,
                                   #   np.sum(move_back_array) + self.chromosome[22] * fails])
                                   -10])
@@ -181,7 +181,7 @@ def evalFitness(population):
         different_squares = stats['visits']
 
         # You can define weights to balance the importance of these objectives
-        weight_cleaned_squares = 15  # new square
+        weight_cleaned_squares = 16  # new square
         weight_emptied_bins = 9
         weight_active_turns = 8
         weight_successful_actions = 8
@@ -251,7 +251,7 @@ def newGeneration(old_population):
 
     fitness = evalFitness(old_population)
 
-    num_elite = 6  # Number of top-performing individuals to preserve as elite
+    num_elite = 4  # Number of top-performing individuals to preserve as elite
     elite_indices = np.argsort(fitness)[-num_elite:]
 
     sum_fitness = sum(fitness)
