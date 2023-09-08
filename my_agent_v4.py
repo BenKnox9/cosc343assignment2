@@ -7,7 +7,7 @@ import random
 
 agentName = "<my_agent>"
 # Train against random agent for 5 generations,
-trainingSchedule = [("random_agent.py", 20), ("self", 10)]
+trainingSchedule = [("random_agent.py", 30), ("self", 20)]
 # then against self for 1 generation
 
 # This is the class for your cleaner/agent
@@ -29,10 +29,10 @@ class Cleaner:
         self.chromosome = self.createInitialChromosome()
 
     def createInitialChromosome(self):
-        chromosome = np.empty(21)
+        chromosome = np.empty(24)
 
-        for i in range(21):
-            chromosome[i] = np.random.uniform(-1, 1)
+        for i in range(24):
+            chromosome[i] = np.random.uniform(-2, 2)
 
         return chromosome
 
@@ -117,11 +117,20 @@ class Cleaner:
 
         action_vector = np.zeros(4)
 
-        action_vector = np.array([np.sum(move_forward_array) / 6,
-                                  np.sum(turn_right_array) / 4,
-                                  np.sum(turn_left_array) / 4,
-                                  np.sum(move_back_array) / 8])
-      
+        action_vector = np.array([np.sum(move_forward_array) +
+                                  np.sum(
+                                      energy_locations[0:-1, 1:-1] * (self.chromosome[21] / energy) * (self.chromosome[21] / (bin + 1))),
+                                  np.sum(turn_right_array) +
+                                  np.sum(energy_locations[:, 0] * (self.chromosome[21] / energy) * (self.chromosome[21] / (bin + 1))) +
+                                  np.sum(
+                                      energy_locations[2, 1] * (self.chromosome[21] / energy) * (self.chromosome[21] / (bin + 1))) +
+                                  self.chromosome[22] * fails,
+                                  np.sum(turn_left_array) +
+                                  np.sum(energy_locations[:, -1] * (self.chromosome[21] / energy) * (self.chromosome[21] / (bin + 1))) +
+                                  np.sum(
+                                      energy_locations[2, 3] * (self.chromosome[21] / energy) * (self.chromosome[21] / (bin + 1))) +
+                                  self.chromosome[22] * fails,
+                                  np.sum(move_back_array) + self.chromosome[22] * fails])
 
         #
         # The 'actions' variable must be returned, and it must be a 4-item list or a 4-dim numpy vector
@@ -171,7 +180,7 @@ def evalFitness(population):
         different_squares = stats['visits']
 
         # You can define weights to balance the importance of these objectives
-        weight_cleaned_squares = 13  # new square
+        weight_cleaned_squares = 14  # new square
         weight_emptied_bins = 9
         weight_active_turns = 8
         weight_successful_actions = 8
@@ -301,12 +310,12 @@ def newGeneration(old_population):
 
 # Random point cross over
 def cross_over(parent1, parent2):
-    firstSplit = random.randint(0, 20)
-    secondSplit = random.randint(0, 20)
+    firstSplit = random.randint(0, 23)
+    secondSplit = random.randint(0, 23)
     newChild = []
 
     while firstSplit == secondSplit:
-        firstSplit = random.randint(0, 20)
+        firstSplit = random.randint(0, 23)
 
     if firstSplit > secondSplit:
         placeHolder = firstSplit
@@ -327,7 +336,7 @@ def mutate(child):
     mutateLevel = 0.05
     random_decimal = round(random.uniform(0, 1), 2)
     if random_decimal < mutateLevel:
-        k = random.randint(0, 20)
+        k = random.randint(0, 23)
         v = np.random.uniform(-1, 1)
         child[k] = v
     return child
