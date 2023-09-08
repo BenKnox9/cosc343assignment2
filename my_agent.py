@@ -7,7 +7,7 @@ import random
 
 agentName = "<my_agent>"
 # Train against random agent for 5 generations,
-trainingSchedule = [("random_agent.py", 100), ("self", 50)]
+trainingSchedule = [("random_agent.py", 10), ("self", 10)]
 # then against self for 1 generation
 
 # This is the class for your cleaner/agent
@@ -111,10 +111,19 @@ class Cleaner:
 
         action_vector = np.zeros(4)
 
-        action_vector = np.array([np.sum(move_forward_array),
-                                  np.sum(turn_right_array),
-                                  np.sum(turn_left_array),
+        action_vector = np.array([np.sum(move_forward_array) +
+                                  np.sum(
+                                      energy_locations[0:-1, 1:-1] * (1 / energy)),
+                                  np.sum(turn_right_array) +
+                                  np.sum(energy_locations[:, 0] * (1 / energy)) +
+                                  np.sum(
+                                      energy_locations[2, 1] * (1 / energy)),
+                                  np.sum(turn_left_array) +
+                                  np.sum(energy_locations[:, -1] * (1 / energy)) +
+                                  np.sum(
+                                      energy_locations[2, 3] * (1 / energy)),
                                   np.sum(move_back_array)])
+        # print("ACTION VECTOR: ", action_vector)
         # action_vector = np.array([np.sum(move_forward_array) / 6,
         #                           np.sum(turn_right_array) / 4,
         #                           np.sum(turn_left_array) / 4,

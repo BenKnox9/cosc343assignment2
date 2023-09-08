@@ -7,7 +7,7 @@ import random
 
 agentName = "<my_agent>"
 # Train against random agent for 5 generations,
-trainingSchedule = [("random_agent.py", 100), ("self", 50)]
+trainingSchedule = [("random_agent.py", 20), ("self", 10)]
 # then against self for 1 generation
 
 # This is the class for your cleaner/agent
@@ -117,10 +117,22 @@ class Cleaner:
 
         action_vector = np.zeros(4)
 
-        action_vector = np.array([np.sum(move_forward_array) / 6,
-                                  np.sum(turn_right_array) / 4,
-                                  np.sum(turn_left_array) / 4,
-                                  np.sum(move_back_array) / 8])
+        # action_vector = np.array([np.sum(move_forward_array) / 6,
+        #                           np.sum(turn_right_array) / 4,
+        #                           np.sum(turn_left_array) / 4,
+        #                           np.sum(move_back_array) / 8])
+        action_vector = np.array([np.sum(move_forward_array) +
+                                  np.sum(
+                                      energy_locations[0:-1, 1:-1] * (4 / energy)),
+                                  np.sum(turn_right_array) +
+                                  np.sum(energy_locations[:, 0] * (4 / energy)) +
+                                  np.sum(
+                                      energy_locations[2, 1] * (4 / energy)),
+                                  np.sum(turn_left_array) +
+                                  np.sum(energy_locations[:, -1] * (4 / energy)) +
+                                  np.sum(
+                                      energy_locations[2, 3] * (4 / energy)),
+                                  np.sum(move_back_array)])
 
         #
         # The 'actions' variable must be returned, and it must be a 4-item list or a 4-dim numpy vector
@@ -170,16 +182,16 @@ def evalFitness(population):
         same_square = stats['visits']
 
         # You can define weights to balance the importance of these objectives
-        weight_cleaned_squares = 13  # new square
+        weight_cleaned_squares = 14  # new square
         weight_emptied_bins = 9
-        weight_active_turns = 6
-        weight_successful_actions = 4
+        weight_active_turns = 8
+        weight_successful_actions = 8
 
         weight_recharge_count = 8
         weight_recharge_energy = 0
-        weight_same_square = 4  # new square
+        weight_same_square = 8  # new square
 
-        if same_square < 3 or cleaned_squares == 0:
+        if same_square < 4 or cleaned_squares == 0:
             fitness[n] = 1
         else:
             fitness[n] = (
