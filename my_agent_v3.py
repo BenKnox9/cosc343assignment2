@@ -29,9 +29,9 @@ class Cleaner:
         self.chromosome = self.createInitialChromosome()
 
     def createInitialChromosome(self):
-        chromosome = np.empty(59)
+        chromosome = np.empty(21)
 
-        for i in range(59):
+        for i in range(21):
             chromosome[i] = np.random.uniform(-1, 1)
 
         return chromosome
@@ -86,13 +86,15 @@ class Cleaner:
         floor_plus_energy = floor_state + energy_locations
         # a map where -1 indicates dirty square, 0 a clean one, and 1 an energy station.
 
-        front_percep = np.concatenate(
-            (floor_state[0:-1, 1:-1], energy_locations[0:-1, 1:-1], vertical_bots[0:-1, 1:-1], horizontal_bots[0:-1, 1:-1]))
+        front_percep = floor_plus_energy[0:-1, 1:-1]
 
-        left_percep = np.concatenate((floor_state[:, 0], [floor_state[2, 1]], energy_locations[:, 0], [
-                                     energy_locations[2, 1]], vertical_bots[:, 0], [vertical_bots[2, 1]], horizontal_bots[:, 0], [horizontal_bots[2, 1]]))
-        right_percep = np.concatenate((floor_state[:, -1], [floor_state[2, 3]], energy_locations[:, -1], [
-                                      energy_locations[2, 3]], vertical_bots[:, -1], [vertical_bots[2, 3]], horizontal_bots[:, -1], [horizontal_bots[2, 3]]))
+        left_column = floor_plus_energy[:, 0]
+        bottom_left_corner = floor_plus_energy[2, 1]
+        left_percep = np.concatenate((left_column, [bottom_left_corner]))
+
+        right_column = floor_plus_energy[:, -1]
+        bottom_right_corner = floor_plus_energy[2, 3]
+        right_percep = np.concatenate((right_column, [bottom_right_corner]))
 
         back_percep = np.array(
             [vertical_bots[0, 2], horizontal_bots[1, 1], horizontal_bots[1, 3]])
@@ -101,24 +103,24 @@ class Cleaner:
         # through 'self.chromosome'.
 
         # TRY ADDING BIAS AFTER NORMALISING
-        move_forward_array = (front_percep.flatten() * self.chromosome[:24])
+        move_forward_array = np.concatenate(
+            (front_percep.flatten() * self.chromosome[:6], [self.chromosome[6]]))
 
-        turn_left_array = (left_percep * self.chromosome[24:40])
+        turn_left_array = np.concatenate(
+            (left_percep * self.chromosome[7:11], [self.chromosome[11]]))
 
-        turn_right_array = (right_percep * self.chromosome[40:56])
+        turn_right_array = np.concatenate(
+            (right_percep * self.chromosome[12:16], [self.chromosome[16]]))
 
-        move_back_array = (back_percep * self.chromosome[56: 59])
+        move_back_array = np.concatenate(
+            (back_percep * self.chromosome[17: 20], [self.chromosome[20]]))
 
         action_vector = np.zeros(4)
 
-        action_vector = np.array([np.sum(move_forward_array),
-                                  np.sum(turn_right_array),
-                                  np.sum(turn_left_array),
-                                  np.sum(move_back_array)])
-        # action_vector = np.array([np.sum(move_forward_array) / 6,
-        #                           np.sum(turn_right_array) / 4,
-        #                           np.sum(turn_left_array) / 4,
-        #                           np.sum(move_back_array) / 8])
+        action_vector = np.array([np.sum(move_forward_array) / 6,
+                                  np.sum(turn_right_array) / 4,
+                                  np.sum(turn_left_array) / 4,
+                                  np.sum(move_back_array) / 8])
 
         #
         # The 'actions' variable must be returned, and it must be a 4-item list or a 4-dim numpy vector
@@ -298,12 +300,12 @@ def newGeneration(old_population):
 
 # Random point cross over
 def cross_over(parent1, parent2):
-    firstSplit = random.randint(0, 58)
-    secondSplit = random.randint(0, 58)
+    firstSplit = random.randint(0, 20)
+    secondSplit = random.randint(0, 20)
     newChild = []
 
     while firstSplit == secondSplit:
-        firstSplit = random.randint(0, 58)
+        firstSplit = random.randint(0, 20)
 
     if firstSplit > secondSplit:
         placeHolder = firstSplit
@@ -324,7 +326,7 @@ def mutate(child):
     mutateLevel = 0.05
     random_decimal = round(random.uniform(0, 1), 2)
     if random_decimal < mutateLevel:
-        k = random.randint(0, 58)
+        k = random.randint(0, 20)
         v = np.random.uniform(-1, 1)
         child[k] = v
     return child

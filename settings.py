@@ -30,5 +30,5 @@ game_settings = {
     # Wheter to save final games
     "saveFinalGames": True,
 
-    "seed": 0   # seed for game choices, None for random seed
+    "seed": 1   # seed for game choices, None for random seed
 }
