@@ -30,9 +30,9 @@ class Cleaner:
         self.chromosome = self.createInitialChromosome()
 
     def createInitialChromosome(self):
-        chromosome = np.empty(26)
+        chromosome = np.empty(29)
 
-        for i in range(26):
+        for i in range(29):
             chromosome[i] = np.random.uniform(-2, 2)
 
         return chromosome
@@ -346,7 +346,7 @@ def mutate(child):
     mutateLevel = 0.07
     random_decimal = round(random.uniform(0, 1), 2)
     if random_decimal < mutateLevel:
-        k = random.randint(0, 24)
+        k = random.randint(0, 28)
         v = np.random.uniform(-1, 1)
         child[k] = v
     return child
