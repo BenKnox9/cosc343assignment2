@@ -17,14 +17,14 @@ result = original_array[0:-1, 1:-1]
 # front_percep = np.concatenate(
 #     original_array[0:-2, 0], [original_array[1, 2]])
 
-front_percep = original_array[0:-1, 1:4]
+front_percep = original_array[0:-1, 2]
 
-left_percep = original_array[:, 0:2]
+left_percep = original_array[-1, :2]
 
-right_percep = original_array[:, -2:]
+right_percep = original_array[-1, -2:]
 
 
-print(right_percep)
+print(left_percep)
 
 
 # Print the result
