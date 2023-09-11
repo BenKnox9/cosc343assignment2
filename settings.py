@@ -7,7 +7,7 @@ __email__ = "lech.szymanski@otago.ac.nz"
 game_settings = {
 
     # File implementing the agent playing as player 1
-    "player1": "my_agent_v8.py",
+    "player1": "my_agent_v9.py",
 
     # File implementing the agent playing as player 2
     "player2": "random_agent.py",
@@ -22,7 +22,7 @@ game_settings = {
     "nTurns": 100,
 
     # Speed of visualisation ('slow','normal','fast')
-    "visSpeed": 'normal',
+    "visSpeed": 'fast',
 
     # Visualisation resolution
     "visResolution": (1280, 720),

@@ -6,10 +6,9 @@ import numpy as np
 import random
 
 agentName = "<my_agent>"
-# Train against random agent for 5 generations,
-trainingSchedule = [("random_agent.py", 20), ("self", 20),
-                    ("random_agent.py", 20)]
-# then against self for 1 generation
+
+trainingSchedule = [("random_agent.py", 0), ("self", 0),
+                    ("random_agent.py", 0)]
 
 # This is the class for your cleaner/agent
 
@@ -125,7 +124,8 @@ class Cleaner:
 
         action_vector = np.array([np.sum(move_forward_array) +
                                   np.sum(
-                                      energy_locations[0:-1, 1:-1] * energy_multiplier),
+                                      energy_locations[0:-1, 1:-1] * energy_multiplier) + 
+                                      self.chromosome[22] * fails,
 
                                   np.sum(turn_right_array) +
                                   np.sum(energy_locations[:, 0] * energy_multiplier) +

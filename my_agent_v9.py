@@ -7,8 +7,9 @@ import random
 
 agentName = "<my_agent>"
 # Train against random agent for 5 generations,
-trainingSchedule = [("random_agent.py", 20), ("self", 20),
-                    ("random_agent.py", 20)]
+trainingSchedule = [("random_agent.py", 30), ("self", 30),
+                    ("random_agent.py", 30)]
+# trainingSchedule = [("random_agent.py", 0)]
 # then against self for 1 generation
 
 # This is the class for your cleaner/agent
@@ -30,9 +31,9 @@ class Cleaner:
         self.chromosome = self.createInitialChromosome()
 
     def createInitialChromosome(self):
-        chromosome = np.empty(29)
+        chromosome = np.empty(38)
 
-        for i in range(29):
+        for i in range(38):
             chromosome[i] = np.random.uniform(-2, 2)
 
         return chromosome
@@ -78,66 +79,56 @@ class Cleaner:
         horizontal_bots = visual[:, :, 3]
         flat_horizontal_bots = horizontal_bots.flatten()
 
-        self.flattenedVisuals = np.concatenate(
-            (flat_floor_state, flat_energy_locations, flat_vertical_bots, flat_horizontal_bots))
-        self.flattenedVisuals = np.concatenate(
-            (self.flattenedVisuals, [energy, bin, fails]))
-
         # You may combine floor_state and energy_locations if you'd like: floor_state + energy_locations would give you
         floor_plus_energy = floor_state + energy_locations
         # a map where -1 indicates dirty square, 0 a clean one, and 1 an energy station.
 
-        top_middle = floor_plus_energy[0, 1:4]
-        middle_value = floor_plus_energy[1, 2]
-        front_percep = np.concatenate((top_middle, [middle_value]))
+        front_percep = floor_state[0:-1, 1:4]
+        right_percep = floor_state[:, -2:]
+        left_percep = floor_state[:, 0:2]
 
-        left_column = floor_plus_energy[:, 0]
-        bottom_left_corner = floor_plus_energy[1:3, 1]
-        left_percep = np.concatenate((left_column, bottom_left_corner))
-
-        right_column = floor_plus_energy[:, -1]
-        bottom_right_corner = floor_plus_energy[1:3, 3]
-        right_percep = np.concatenate((right_column, bottom_right_corner))
-
+        # back_percep = np.array(
+        #     [vertical_bots[0, 2], horizontal_bots[1, 1], horizontal_bots[1, 3]])
         back_percep = np.array(
             [vertical_bots[0, 2], horizontal_bots[1, 1], horizontal_bots[1, 3]])
 
         # You should implement a model here that translates from 'percepts' to 'actions'
         # through 'self.chromosome'.
 
-        # TRY ADDING BIAS AFTER NORMALISING
         move_forward_array = np.concatenate(
-            (front_percep.flatten() * self.chromosome[:4], [self.chromosome[4]]))
+            (front_percep.flatten() * self.chromosome[:6], [self.chromosome[6] * energy * bin]))
 
         turn_left_array = np.concatenate(
-            (left_percep * self.chromosome[5:10], [self.chromosome[10]]))
+            (left_percep.flatten() * self.chromosome[7:13], [self.chromosome[13] * energy * bin]))
 
         turn_right_array = np.concatenate(
-            (right_percep * self.chromosome[11:16], [self.chromosome[16]]))
+            (right_percep.flatten() * self.chromosome[14:20], [self.chromosome[20] * energy * bin]))
 
         move_back_array = np.concatenate(
-            (back_percep * self.chromosome[17: 20], [self.chromosome[20]]))
+            (back_percep * self.chromosome[21: 24], [self.chromosome[24]]))
 
         action_vector = np.zeros(4)
 
-        energy_multiplier = ((self.chromosome[21]) / energy) * (
-            (self.chromosome[24] * self.chromosome[25]) / (bin + 1))
-
+        # action_vector = np.array([np.sum(move_forward_array) +
+        #                           np.sum(
+        #                               energy_locations[0:-1, 1:4].flatten() * ((self.chromosome[25]) / energy) * ((self.chromosome[26] * self.chromosome[27]) / (bin + 1))),
+        #                           np.sum(turn_right_array) +
+        #                           np.sum(energy_locations[:, -2:].flatten() * ((self.chromosome[24]) / energy) * ((self.chromosome[29] * self.chromosome[30]) / (bin + 1))) +
+        #                           self.chromosome[31] * fails,
+        #                           np.sum(turn_left_array) +
+        #                           np.sum(energy_locations[:, 0:2].flatten() * ((self.chromosome[32]) / energy) * ((self.chromosome[33] * self.chromosome[34]) / (bin + 1))) +
+        #                           self.chromosome[35] * fails,
+        #                           np.sum(move_back_array) + self.chromosome[36]])
         action_vector = np.array([np.sum(move_forward_array) +
                                   np.sum(
-                                      energy_locations[0:-1, 1:-1] * energy_multiplier),
-
+                                      energy_locations[0:-1, 1:4].flatten() * ((self.chromosome[25]) / energy) * ((self.chromosome[26] * self.chromosome[27]) / (bin + 1))),
                                   np.sum(turn_right_array) +
-                                  np.sum(energy_locations[:, 0] * energy_multiplier) +
-                                  np.sum(energy_locations[2, 1] * energy_multiplier) +
-                                  self.chromosome[22] * fails,
-
+                                  np.sum(energy_locations[:, -2:].flatten() * ((self.chromosome[25]) / energy) * ((self.chromosome[26] * self.chromosome[27]) / (bin + 1))) +
+                                  self.chromosome[31] * fails,
                                   np.sum(turn_left_array) +
-                                  np.sum(energy_locations[:, -1] * energy_multiplier) +
-                                  np.sum(energy_locations[2, 3] * energy_multiplier) +
-                                  self.chromosome[22] * fails,
-                                  #   np.sum(move_back_array) + self.chromosome[22] * fails])
-                                  -10])
+                                  np.sum(energy_locations[:, 0:2].flatten() * ((self.chromosome[25]) / energy) * ((self.chromosome[26] * self.chromosome[27]) / (bin + 1))) +
+                                  self.chromosome[31] * fails,
+                                  np.sum(move_back_array) + self.chromosome[36]])
 
         #
         # The 'actions' variable must be returned, and it must be a 4-item list or a 4-dim numpy vector
@@ -187,7 +178,7 @@ def evalFitness(population):
         different_squares = stats['visits']
 
         # You can define weights to balance the importance of these objectives
-        weight_cleaned_squares = 18  # new square
+        weight_cleaned_squares = 19  # new square
         weight_emptied_bins = 9
         weight_active_turns = 8
         weight_successful_actions = 8
@@ -346,7 +337,7 @@ def mutate(child):
     mutateLevel = 0.07
     random_decimal = round(random.uniform(0, 1), 2)
     if random_decimal < mutateLevel:
-        k = random.randint(0, 28)
+        k = random.randint(0, 36)
         v = np.random.uniform(-1, 1)
         child[k] = v
     return child
