@@ -7,7 +7,7 @@ __email__ = "lech.szymanski@otago.ac.nz"
 game_settings = {
 
     # File implementing the agent playing as player 1
-    "player1": "my_agent_v10.py",
+    "player1": "my_agent_v12.py",
 
     # File implementing the agent playing as player 2
     "player2": "random_agent.py",

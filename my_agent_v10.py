@@ -62,30 +62,26 @@ class Cleaner:
 
         # 3x5 map where -1 indicates dirty square, 0 clean one
         floor_state = visual[:, :, 0]
-        flat_floor_state = floor_state.flatten()
 
         # 3x5 map where 1 indicates the location of energy station, 0 otherwise
         energy_locations = visual[:, :, 1]
-        flat_energy_locations = energy_locations.flatten()
 
         # 3x5 map of bots that can in this turn move up or down (from this bot's point of
         # view), -1 if the bot is an enemy, 1 if it is friendly
         vertical_bots = visual[:, :, 2]
-        flat_vertical_bots = vertical_bots.flatten()
 
         # 3x5 map of bots that can in this turn move up or down (from this bot's point
         # of view), -1 if the bot is an enemy, 1 if it is friendly
         horizontal_bots = visual[:, :, 3]
-        flat_horizontal_bots = horizontal_bots.flatten()
 
         # You may combine floor_state and energy_locations if you'd like: floor_state + energy_locations would give you
         floor_plus_energy = floor_state + energy_locations
         # a map where -1 indicates dirty square, 0 a clean one, and 1 an energy station.
 
-        # front_percep = floor_state[0:-1, 2]
         top_middle = floor_plus_energy[0, 1:4]
         middle_value = floor_plus_energy[1, 2]
         front_percep = np.concatenate((top_middle, [middle_value]))
+        # front_percep = floor_state[0:-1, 2]
 
         left_percep = floor_state[-1, :2]
         right_percep = floor_state[-1, -2:]
@@ -112,26 +108,6 @@ class Cleaner:
 
         action_vector = np.zeros(4)
 
-        # action_vector = np.array([np.sum(move_forward_array) +
-        #                           np.sum(
-        #                               energy_locations[0:-1, 1:4].flatten() * ((self.chromosome[25]) / energy) * ((self.chromosome[26] * self.chromosome[27]) / (bin + 1))),
-        #                           np.sum(turn_right_array) +
-        #                           np.sum(energy_locations[:, -2:].flatten() * ((self.chromosome[24]) / energy) * ((self.chromosome[29] * self.chromosome[30]) / (bin + 1))) +
-        #                           self.chromosome[31] * fails,
-        #                           np.sum(turn_left_array) +
-        #                           np.sum(energy_locations[:, 0:2].flatten() * ((self.chromosome[32]) / energy) * ((self.chromosome[33] * self.chromosome[34]) / (bin + 1))) +
-        #                           self.chromosome[35] * fails,
-        #                           np.sum(move_back_array) + self.chromosome[36]])
-        # action_vector = np.array([np.sum(move_forward_array) +
-        #                           np.sum(
-        #                               energy_locations[:-1, 1:4].flatten() * ((self.chromosome[15]) / energy) * ((self.chromosome[16] * self.chromosome[17]) / (bin + 1))),
-        #                           np.sum(turn_right_array)
-        #                           np.sum(energy_locations[:, -2:].flatten() * ((self.chromosome[15]) / energy) * ((self.chromosome[16] * self.chromosome[17]) / (bin + 1))) +
-        #                           self.chromosome[18] * fails,
-        #                           np.sum(turn_left_array) +
-        #                           np.sum(energy_locations[:, 0:2].flatten() * ((self.chromosome[15]) / energy) * ((self.chromosome[16] * self.chromosome[17]) / (bin + 1))) +
-        #                           self.chromosome[19] * fails,
-        #                           np.sum(move_back_array) + self.chromosome[18]])
         action_vector = np.array([
             np.sum(move_forward_array) +
             np.sum(
@@ -314,17 +290,6 @@ def newGeneration(old_population):
 
     return (new_population, avg_fitness)
 
-
-# Random selection cross over
-# def cross_over(parent1, parent2):
-#     uniform_crossover = [random.randint(0, 1) for _ in range(len(parent1))]
-#     newChild = []
-#     for i in range(len(parent1)):
-#         if uniform_crossover[i] == 1:
-#             newChild.append(parent1[i])
-#         else:
-#             newChild.append(parent2[i])
-#     return newChild
 
 # Random point cross over
 def cross_over(parent1, parent2):
