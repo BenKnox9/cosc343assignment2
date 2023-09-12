@@ -6,24 +6,13 @@ import numpy as np
 import random
 
 agentName = "<my_agent>"
-# Train against random agent for 5 generations,
 trainingSchedule = [("random_agent.py", 50), ("self", 50),
                     ("random_agent.py", 50)]
-
-
-# trainingSchedule = [("random_agent.py", 0)]
-# then against self for 1 generation
-
-# This is the class for your cleaner/agent
 
 
 class Cleaner:
 
     def __init__(self, nPercepts, nActions, gridSize, maxTurns):
-        # This is where agent initialisation code goes (including setting up a chromosome with random values)
-
-        # Leave these variables as they are, even if you don't use them in your AgentFunction - they are
-        # needed for initialisation of children Cleaners.
         self.nPercepts = nPercepts
         self.nActions = nActions
         self.gridSize = gridSize
@@ -32,6 +21,10 @@ class Cleaner:
         self.chromosome = self.createInitialChromosome()
 
     def createInitialChromosome(self):
+        """Generates a chromosome of length 21, with each value initialised as a random number between -2 and 2.
+            :return: chromosome
+
+            """
         chromosome = np.empty(21)
 
         for i in range(21):
@@ -40,6 +33,12 @@ class Cleaner:
         return chromosome
 
     def AgentFunction(self, percepts):
+        """Generates an action vector based on the chromosome and the agents current percepts.
+                :param percepts: agents current percepts (it's visuals, energy, bin, and fails)
+
+                :return: action_vector, a vector which is to determine the next action for the agent
+
+            """
         # The percepts are a tuple consisting of four pieces of information
         #
         # visual - it information of the 3x5 grid of the squares in front and to the side of the cleaner; this variable
@@ -60,8 +59,6 @@ class Cleaner:
 
         visual, energy, bin, fails = percepts
 
-        # You can further break down the visual information
-
         # 3x5 map where -1 indicates dirty square, 0 clean one
         floor_state = visual[:, :, 0]
 
@@ -79,16 +76,14 @@ class Cleaner:
         # You may combine floor_state and energy_locations if you'd like: floor_state + energy_locations would give you
         # a map where -1 indicates dirty square, 0 a clean one, and 1 an energy station.
 
+        # Perceps for the agent based on the floor state (clean/dirty tiles)
         front_percep = floor_state[0:-1, 2]
         left_percep = floor_state[-1, :2]
         right_percep = floor_state[-1, -2:]
-
         back_percep = np.array(
             [vertical_bots[0, 2], horizontal_bots[1, 1], horizontal_bots[1, 3]])
 
-        # You should implement a model here that translates from 'percepts' to 'actions'
-        # through 'self.chromosome'.
-
+        # An array created with the percep multiplied by various chromosome values and other perceps
         move_forward_array = np.concatenate(
             (front_percep.flatten() * self.chromosome[:2], [self.chromosome[2] * energy * bin]))
 
@@ -101,6 +96,7 @@ class Cleaner:
         move_back_array = np.concatenate(
             (back_percep * self.chromosome[11: 14], [self.chromosome[14] * energy * bin]))
 
+        # An array created with the energy locations percep multiplied by various chromosome values and other perceps
         move_forward_energy_array = energy_locations[:-1, 1:4].flatten() * (
             (self.chromosome[15]) / energy) * ((self.chromosome[17]) / (bin + 1))
         turn_right_energy_array = energy_locations[:, -2:].flatten() * (
@@ -112,6 +108,7 @@ class Cleaner:
 
         action_vector = np.zeros(4)
 
+        # Creating the action vector with sum of each set of values
         action_vector = np.array([
             np.sum(move_forward_array) +
             np.sum(move_forward_energy_array) +
@@ -149,12 +146,16 @@ class Cleaner:
         # perform random actions - your agents' actions should be deterministic from
         # computation based on self.chromosome and percepts
 
-        # action_vector = np.random.randint(
-        #     low=-100, high=100, size=self.nActions)
         return action_vector
 
 
 def evalFitness(population):
+    """Gives a fitness score to the agent based on different weightings for each of the stats the agent receives.
+                :param population: the population of cleaners, each cleaner containing its own stats.
+
+                :return: fitness, the score given to a cleaner after a game.
+
+            """
 
     N = len(population)
 
@@ -168,6 +169,7 @@ def evalFitness(population):
     for n, cleaner in enumerate(population):
         stats = cleaner.game_stats
 
+        # Each stat
         cleaned_squares = stats['cleaned']
         emptied_bins = stats['emptied']
         active_turns = stats['active_turns']
@@ -177,6 +179,7 @@ def evalFitness(population):
         recharge_energy = stats['recharge_energy']
         different_squares = stats['visits']
 
+        # Weightings for each stat
         weight_cleaned_squares = 19
         weight_emptied_bins = 9
         weight_active_turns = 8
@@ -186,6 +189,7 @@ def evalFitness(population):
         weight_recharge_energy = 0
         weight_different_squares = 8
 
+        # Punishing bad chromosomes
         if different_squares < 4 or cleaned_squares == 0:
             fitness[n] = 1
         else:
@@ -200,7 +204,8 @@ def evalFitness(population):
                 weight_different_squares * different_squares
             )
 
-        if cleaned_squares > 5:
+        # Rewarding good chromosomes
+        if cleaned_squares > 8:
             fitness += 50
     # for n, cleaner in enumerate(population):
     #     # cleaner is an instance of the Cleaner class that you implemented above, therefore you can access any attributes
@@ -228,6 +233,12 @@ def evalFitness(population):
 
 
 def newGeneration(old_population):
+    """Generates a new population of cleaners based on the old population, uses roulette wheel selection to select parents.
+                :param old_population: All agents in the previous population
+
+                :return: new_population, A new population of cleaners 
+
+            """
 
     # This function should return a tuple consisting of:
     # - a list of the new_population of cleaners that is of the same length as the old_population,
@@ -242,17 +253,16 @@ def newGeneration(old_population):
     nActions = old_population[0].nActions
     maxTurns = old_population[0].maxTurns
 
-    # At this point you should sort the old_population cleaners according to fitness, setting it up for parent
-    # selection.
-
     fitness = evalFitness(old_population)
 
+    # Getting the index of the four chromosomes with the highest fitness
     num_elite = 4
     elite_indices = np.argsort(fitness)[-num_elite:]
 
     sum_fitness = sum(fitness)
     new_fitness = []
 
+    # Creating a new array of fitness's normalised to 1
     for value in fitness:
         new_fitness.append(value / sum_fitness)
 
@@ -267,6 +277,7 @@ def newGeneration(old_population):
         if n in elite_indices:
             new_cleaner.chromosome = old_population[n].chromosome
         else:
+            # Roulette wheel selection of parents
             newParentsIndices = np.random.choice(
                 len(old_population), size=2, replace=False, p=new_fitness)
             newParent1 = old_population[newParentsIndices[0]].chromosome
@@ -285,8 +296,16 @@ def newGeneration(old_population):
     return (new_population, avg_fitness)
 
 
-# Random point cross over
 def cross_over(parent1, parent2):
+    """Generates a child from two parents, uses single point crossover to take half of one parent up to that point,
+        and the rest of the other parent.
+                :param parent1: The first parent
+                    parent2: The second parent
+
+                :return: newChild, a child which has been created from the cross over of two parents.
+
+            """
+    # Selecting the number of times to cross over
     num_crossover_points = 1
     chromosome_length = len(parent1)
     crossover_points = sorted(random.sample(
@@ -312,6 +331,12 @@ def cross_over(parent1, parent2):
 
 
 def mutate(child):
+    """Mutates a chromosome, will only mutate 7% of the time, the rest of the time the child is returned as is.
+                :param child: The chromosome to be mutated
+
+                :return: child, the child which has now been mutated, or in its original state
+
+            """
     mutateLevel = 0.07
     random_decimal = round(random.uniform(0, 1), 2)
     if random_decimal < mutateLevel:
