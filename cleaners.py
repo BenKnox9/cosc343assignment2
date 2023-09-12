@@ -7,7 +7,8 @@ import importlib
 import numpy as np
 import traceback
 import sys
-import gzip, pickle
+import gzip
+import pickle
 from datetime import datetime
 import os
 import signal
@@ -23,32 +24,34 @@ maxBin = 3
 def alarm_handler(signum, frame):
     raise RuntimeError("Time out")
 
-def percepts_global_to_agent_frame_of_reference(percepts,rotation):
+
+def percepts_global_to_agent_frame_of_reference(percepts, rotation):
 
     if rotation == 90:
         percepts = np.rot90(percepts, axes=[0, 1])
     elif rotation == 270:
         percepts = np.rot90(percepts, axes=[1, 0])
     elif rotation == 180:
-        percepts = np.rot90(np.rot90(percepts,axes=[0,1]),axes=[0,1])
-
+        percepts = np.rot90(np.rot90(percepts, axes=[0, 1]), axes=[0, 1])
 
     return percepts
+
 
 def actions_agent_to_global_shift(rotation):
 
     if rotation == 0:
-        return -1,0
+        return -1, 0
     elif rotation == 90:
-        return 0,1
+        return 0, 1
     elif rotation == 180:
-        return 1,0
+        return 1, 0
     elif rotation == 270:
-        return 0,-1
+        return 0, -1
     else:
         raise RuntimeError("Rotation %d, should be either 0,90,180 or 270.")
 
-def check_coordinate_wraparound(y,x,Y,X):
+
+def check_coordinate_wraparound(y, x, Y, X):
 
     if y < 0:
         y += Y
@@ -60,17 +63,17 @@ def check_coordinate_wraparound(y,x,Y,X):
     elif x >= X:
         x -= X
 
-    return y,x
+    return y, x
 
 
-def  move_on_square_in_direction(y,x,direction,Y,X):
+def move_on_square_in_direction(y, x, direction, Y, X):
 
     yd, xd = actions_agent_to_global_shift(direction)
 
     y += yd
     x += xd
 
-    return check_coordinate_wraparound(y,x,Y,X)
+    return check_coordinate_wraparound(y, x, Y, X)
 
 
 # Class avatar is a wrapper for the agent with extra bits required
@@ -78,13 +81,12 @@ def  move_on_square_in_direction(y,x,direction,Y,X):
 class Avatar:
 
     # Initialise avatar for an agent of a given player
-    def __init__(self,agent,player):
+    def __init__(self, agent, player):
         self.agent = agent
         self.player = player
 
-
     # Reset the avatar variables for a new game
-    def reset_for_new_game(self,position,rotation,gridSize):
+    def reset_for_new_game(self, position, rotation, gridSize):
         self.energy = self.player.game.maxEnergy
         self.position = position
         self.rotation = rotation
@@ -117,19 +119,23 @@ class Avatar:
             signal.alarm(0)
 
         if type(action) != list and type(action) != np.ndarray:
-            self.player.game.throwError("AgentFunction must return a list or numpy array")
+            self.player.game.throwError(
+                "AgentFunction must return a list or numpy array")
             return
 
         if len(action) != maxActions:
-            self.player.game.throwError("The returned action list/array is of length %d, it must be of length %" % (len(action),maxActions))
+            self.player.game.throwError(
+                "The returned action list/array is of length %d, it must be of length %" % (len(action), maxActions))
             return
 
         return action
 
 # Class player holds all the agents for a given player
+
+
 class Player:
 
-    def __init__(self, game, player, playerFile,emptyMode=False,jointname=False):
+    def __init__(self, game, player, playerFile, emptyMode=False, jointname=False):
 
         self.game = game
         self.player = player
@@ -158,13 +164,15 @@ class Player:
 
         else:
             if not os.path.exists(playerFile):
-                self.game.throwError("Error! Agent file '%s' not found" % self.playerFile, playerid)
+                self.game.throwError(
+                    "Error! Agent file '%s' not found" % self.playerFile, playerid)
                 return
 
             if len(playerFile) > 3 and playerFile[-3:].lower() == '.py':
                 playerModule = playerFile[:-3]
             else:
-                self.game.throwError("Error! Agent file %s needs a '.py' extension" % self.playerFile, playerid)
+                self.game.throwError(
+                    "Error! Agent file %s needs a '.py' extension" % self.playerFile, playerid)
                 return
 
             # Import agent file as module
@@ -173,12 +181,13 @@ class Player:
                 signal.alarm(10)
             try:
                 if self.game.in_tournament and playerModule != 'random_agent':
-                    self.exec = importlib.machinery.SourceFileLoader('my_agent', playerModule + '.py').load_module()
+                    self.exec = importlib.machinery.SourceFileLoader(
+                        'my_agent', playerModule + '.py').load_module()
                 else:
                     self.exec = importlib.import_module(playerModule)
 
             except Exception as e:
-                self.throwError(str(e),self.player)
+                self.throwError(str(e), self.player)
                 return
 
             if self.game.in_tournament:
@@ -188,21 +197,24 @@ class Player:
                 self.name = self.exec.agentName
             else:
                 if self.game.in_tournament and playerFile != 'random_agent.py':
-                    self.name = playerFile.split('/')[-2]# playerFile.split('.')[1]
+                    # playerFile.split('.')[1]
+                    self.name = playerFile.split('/')[-2]
                 else:
                     self.name = playerFile
 
             if jointname and self.game.in_tournament:
-               self.pname = playerFile.split('/')[-2]
+                self.pname = playerFile.split('/')[-2]
 
-            if not hasattr(self.exec,'trainingSchedule'):
-                self.game.throwError("Agent is missing the 'trainingSchedule' variable.",self.player)
+            if not hasattr(self.exec, 'trainingSchedule'):
+                self.game.throwError(
+                    "Agent is missing the 'trainingSchedule' variable.", self.player)
                 return
 
             self.trainingSchedule = self.exec.trainingSchedule
 
-            if self.trainingSchedule is not None and not isinstance(self.trainingSchedule,list):
-                self.game.throwError("Error! Agent's 'trainingSchedule' should be a list of (str,int) tuples.",self.player)
+            if self.trainingSchedule is not None and not isinstance(self.trainingSchedule, list):
+                self.game.throwError(
+                    "Error! Agent's 'trainingSchedule' should be a list of (str,int) tuples.", self.player)
                 return
 
             if isinstance(self.trainingSchedule, list):
@@ -210,18 +222,21 @@ class Player:
                 totTrainEpochs = 0
 
                 for trainSession in self.trainingSchedule:
-                    if not isinstance(trainSession,tuple) or len(trainSession) < 2 or not (isinstance(trainSession[0],str)) or not isinstance(trainSession[1],int):
-                        self.game.throwError("Agent's 'trainingSchedule' should be a list containing (str,int) tuples.",self.player)
+                    if not isinstance(trainSession, tuple) or len(trainSession) < 2 or not (isinstance(trainSession[0], str)) or not isinstance(trainSession[1], int):
+                        self.game.throwError(
+                            "Agent's 'trainingSchedule' should be a list containing (str,int) tuples.", self.player)
                         return
 
                     if trainSession[1] < 0:
-                        self.game.throwError("Agent's 'trainingSchedule' should be a list of (str,int) tuples, where int corresponds to the number of train generations.",selfp.playerid)
+                        self.game.throwError(
+                            "Agent's 'trainingSchedule' should be a list of (str,int) tuples, where int corresponds to the number of train generations.", selfp.playerid)
                         return
 
                     totTrainEpochs += trainSession[1]
 
                 if self.game.in_tournament and totTrainEpochs > maxTrainingEpochs:
-                    self.game.throwError("Agent's 'trainingSchedule' cannot specify more than %d training epochs in total." % maxTrainingEpochs)
+                    self.game.throwError(
+                        "Agent's 'trainingSchedule' cannot specify more than %d training epochs in total." % maxTrainingEpochs)
                     return
 
             if self.trainingSchedule is None or self.game.training == 'none':
@@ -235,9 +250,11 @@ class Player:
 
             if self.game.in_tournament and agentFile != 'random_agent':
                 if self.game.training == 'pretrained':
-                    agentFileSave = "/".join(agentFile.split('/')[:-1] + ['my_agent'])
+                    agentFileSave = "/".join(agentFile.split('/')
+                                             [:-1] + ['my_agent'])
                 else:
-                    agentFileSave = "/".join(agentFile.split('/')[:-1] + [agentFile.split('/')[-2]])
+                    agentFileSave = "/".join(agentFile.split('/')
+                                             [:-1] + [agentFile.split('/')[-2]])
             else:
                 agentFileSave = agentFile
 
@@ -249,12 +266,11 @@ class Player:
             if self.game.training == 'none' or not os.path.exists(savedAgent) or (not self.game.in_tournament and os.path.getmtime(savedAgent) < os.path.getmtime("%s.py" % agentFile)):
                 pass
             else:
-                with gzip.open(savedAgent,'r') as f:
+                with gzip.open(savedAgent, 'r') as f:
                     agents_saved = pickle.load(f)
                 if self.game.nAgents == len(agents_saved):
                     agents = agents_saved
                     self.trained = True
-
 
             if len(agents) == 0:
                 agents = list()
@@ -263,22 +279,22 @@ class Player:
                         signal.signal(signal.SIGALRM, alarm_handler)
                         signal.alarm(1)
                     try:
-                        agent = self.exec.Cleaner(nPercepts=fieldOfVision*(fieldOfVision//2+1)*4+3, nActions=maxActions, gridSize=self.game.gridSize, maxTurns=self.game.nTurns)
+                        agent = self.exec.Cleaner(nPercepts=fieldOfVision*(fieldOfVision//2+1)*4+3,
+                                                  nActions=maxActions, gridSize=self.game.gridSize, maxTurns=self.game.nTurns)
                     except Exception as e:
-                        self.game.throwError(str(e),self.player)
+                        self.game.throwError(str(e), self.player)
                         return
 
                     if self.game.in_tournament:
                         signal.alarm(0)
                     agents.append(agent)
 
-
             # Convert list of agents to list of avatars
             try:
                 self.agents_to_avatars(agents)
                 self.agents = agents
             except Exception as e:
-                self.game.throwError(str(e),self.player)
+                self.game.throwError(str(e), self.player)
                 return
 
         self.ready = True
@@ -295,15 +311,15 @@ class Player:
                         'The new_population returned from newGeneration() must contain objects of Cleaner() type')
                 else:
                     print("The new_population returned form newGeneration() in '%s' must contain objects of Cleaner() type" %
-                    self.playerFile)
+                          self.playerFile)
                     traceback.print_exc()
                     sys.exit(-1)
 
-            avatar = Avatar(agent,player=self)
+            avatar = Avatar(agent, player=self)
             self.avatars.append(avatar)
             self.stats.append(dict())
 
-    def avatar_to_agent_stats(self,avatar):
+    def avatar_to_agent_stats(self, avatar):
         agent = avatar.agent
         agent.game_stats = {}
         agent.game_stats['emptied'] = avatar.emptied
@@ -316,7 +332,7 @@ class Player:
         return agent
 
     # Get a new generation of agents
-    def new_generation_agents(self,gen):
+    def new_generation_agents(self, gen):
 
         # Record game stats in the agent objects
         old_population = list()
@@ -344,9 +360,11 @@ class Player:
             result = self.exec.newGeneration(old_population)
         except Exception as e:
             if self.game.in_tournament:
-                raise RuntimeError('Failed to execute newGeneration(), %s' % str(e))
+                raise RuntimeError(
+                    'Failed to execute newGeneration(), %s' % str(e))
             else:
-                print("Failed to execute newGeneration() from '%s', %s" % (self.playerFile, str(e)))
+                print("Failed to execute newGeneration() from '%s', %s" %
+                      (self.playerFile, str(e)))
                 traceback.print_exc()
                 sys.exit(-1)
 
@@ -355,9 +373,11 @@ class Player:
 
         if type(result) != tuple or len(result) != 2:
             if self.game.in_tournament:
-                raise RuntimeError('The returned value form newGeneration() must be a 2-item tuple')
+                raise RuntimeError(
+                    'The returned value form newGeneration() must be a 2-item tuple')
             else:
-                print("The returned value form newGeneration() in '%s.py' must be a 2-item tuple" % self.playerFile)
+                print(
+                    "The returned value form newGeneration() in '%s.py' must be a 2-item tuple" % self.playerFile)
                 traceback.print_exc()
                 sys.exit(-1)
 
@@ -365,9 +385,11 @@ class Player:
 
         if type(new_population) != list:
             if self.game.in_tournament:
-                raise RuntimeError('The new_population returned form newGeneration() must be a list')
+                raise RuntimeError(
+                    'The new_population returned form newGeneration() must be a list')
             else:
-                print("The new_population returned form newGeneration() in '%s.py' must be a list" % self.playerFile)
+                print(
+                    "The new_population returned form newGeneration() in '%s.py' must be a list" % self.playerFile)
                 traceback.print_exc()
                 sys.exit(-1)
 
@@ -375,17 +397,21 @@ class Player:
             fitness = float(fitness)
         except Exception as e:
             if self.game.in_tournament:
-                raise RuntimeError('The fitness returned form newGeneration() must be float or int')
+                raise RuntimeError(
+                    'The fitness returned form newGeneration() must be float or int')
             else:
-                print("The new_population returned form newGeneration() in '%s.py' must be a float or int" % self.playerFile)
+                print(
+                    "The new_population returned form newGeneration() in '%s.py' must be a float or int" % self.playerFile)
                 traceback.print_exc()
                 sys.exit(-1)
 
         if len(new_population) != len(old_population):
             if self.game.in_tournament:
-                raise RuntimeError('The new_population returned form newGeneration() must contain %d items' % self.nAgents)
+                raise RuntimeError(
+                    'The new_population returned form newGeneration() must contain %d items' % self.nAgents)
             else:
-                print("The new_population returned form newGeneration() in '%s.py' must contain %d items" % (self.playerFile, self.nAgents))
+                print("The new_population returned form newGeneration() in '%s.py' must contain %d items" % (
+                    self.playerFile, self.nAgents))
                 traceback.print_exc()
                 sys.exit(-1)
 
@@ -414,20 +440,24 @@ class Player:
             fitness = self.exec.evalFitness(agents)
         except:
             if self.game.in_tournament:
-                raise RuntimeError("Failed to execute evalFitness() from '%s'" % self.playerFile)
+                raise RuntimeError(
+                    "Failed to execute evalFitness() from '%s'" % self.playerFile)
             else:
-                print("Failed to execute evalFitness() from '%s'" % self.playerFile)
+                print("Failed to execute evalFitness() from '%s'" %
+                      self.playerFile)
                 traceback.print_exc()
                 sys.exit(-1)
 
-        if isinstance(fitness,np.ndarray):
+        if isinstance(fitness, np.ndarray):
             fitness = fitness.tolist()
 
         if not isinstance(fitness, list):
             if self.game.in_tournament:
-                raise RuntimeError("Function evalFitness() from '%s' must return a list" % self.playerFile)
+                raise RuntimeError(
+                    "Function evalFitness() from '%s' must return a list" % self.playerFile)
             else:
-                print("Function evalFitness() from '%s' must return a list" % self.playerFile)
+                print("Function evalFitness() from '%s' must return a list" %
+                      self.playerFile)
                 traceback.print_exc()
                 sys.exit(-1)
 
@@ -435,11 +465,11 @@ class Player:
             if self.game.in_tournament:
                 raise RuntimeError(
                     "Length of the list returned by evalFitness() from '%s' is %d; expecting the length to be %d." % (
-                    self.playerFile, len(fitness), len(agents)))
+                        self.playerFile, len(fitness), len(agents)))
             else:
                 print(
                     "Length of the list returned by evalFitness() from '%s' is %d; expecting the length to be %d." % (
-                    self.playerFile, len(fitness), len(agents)))
+                        self.playerFile, len(fitness), len(agents)))
                 traceback.print_exc()
                 sys.exit(-1)
 
@@ -454,19 +484,23 @@ class Player:
             sys.stdout.write(msg)
             sys.stdout.flush()
 
-
     def save_trained(self):
 
         savedAgent = self.savedAgent
 
         if self.game.verbose:
-            sys.stdout.write("Saving last generation agents to %s..."  % self.savedAgent)
+            with open("fitnessValues.txt", "w") as file:
+                # Loop through the list and write each item to the file
+                for item in self.fitness:
+                    file.write(repr(item) + "\n")
+            sys.stdout.write(
+                "Saving last generation agents to %s..." % self.savedAgent)
             sys.stdout.flush()
         agents = []
         for avatar in self.avatars:
             agents.append(avatar.agent)
 
-        with gzip.open(savedAgent,'w') as f:
+        with gzip.open(savedAgent, 'w') as f:
             pickle.dump(agents, f)
 
         if self.game.verbose:
@@ -476,53 +510,51 @@ class Player:
 
 class CleanersPlay:
 
-    def __init__(self,game,showGame=None,saveGame=False):
+    def __init__(self, game, showGame=None, saveGame=False):
         self.game = game
 
         Y, X = self.game.gridSize
         self.map = np.zeros((Y, X, 2), dtype='int8')
-        self.map[:,:,0] = -1
-        self.cleaned_by = np.zeros((Y,X),dtype='int8')
-        self.rotations = [0,90,180,270]
+        self.map[:, :, 0] = -1
+        self.cleaned_by = np.zeros((Y, X), dtype='int8')
+        self.rotations = [0, 90, 180, 270]
 
         self.showGame = showGame
         self.saveGame = saveGame
 
-
-    def vis_update(self,players):
+    def vis_update(self, players):
 
         stats = {}
         stats['cleaned'] = [0]*len(players)
         cleaners = []
 
-        for p,player in enumerate(players):
-            for z,avatar in enumerate(player.avatars):
+        for p, player in enumerate(players):
+            for z, avatar in enumerate(player.avatars):
                 stats['cleaned'][p] += avatar.cleaned
-                y,x = avatar.position
+                y, x = avatar.position
                 r = avatar.rotation
                 e = avatar.energy/player.game.maxEnergy
                 b = avatar.bin/maxBin
-                cleaners.append((y,x,r,e,b,p))
+                cleaners.append((y, x, r, e, b, p))
 
         return cleaners, stats
 
-    def manhattan_distance(self, x1,y1,x2,y2):
-        x = np.min([np.abs(x1-x2),np.abs(x2-x1)])
-        y = np.min([np.abs(y1-y2),np.abs(y2-y1)])
+    def manhattan_distance(self, x1, y1, x2, y2):
+        x = np.min([np.abs(x1-x2), np.abs(x2-x1)])
+        y = np.min([np.abs(y1-y2), np.abs(y2-y1)])
 
         return x+y
 
-    def play(self,players):
+    def play(self, players):
 
-        Y,X,_ = np.shape(self.map)
+        Y, X, _ = np.shape(self.map)
 
         tiles = []
 
-
         for y in range(Y):
             for x in range(X):
-                if self.map[y,x,0] != 10:
-                    tiles.append((y,x))
+                if self.map[y, x, 0] != 10:
+                    tiles.append((y, x))
 
         I = self.game.rnd_fixed_seed.permutation(len(tiles))
         tiles = np.array(tiles)[I]
@@ -532,10 +564,10 @@ class CleanersPlay:
         for id, avatar in enumerate(player1.avatars):
 
             while True:
-                y,x = tiles[-1]
+                y, x = tiles[-1]
                 tiles = tiles[:-1]
 
-                if self.map[y,x,1] != 0:
+                if self.map[y, x, 1] != 0:
                     continue
 
                 yf = Y - y - 1
@@ -547,23 +579,23 @@ class CleanersPlay:
 
                 rotation = self.game.rnd_fixed_seed.choice(self.rotations)
 
-                avatar.reset_for_new_game((y,x),rotation,(Y,X))
-                self.map[y,x,1] = rotation/90+1
-                self.map[y,x,0] = 1
-                for i in [-1,0,1]:
+                avatar.reset_for_new_game((y, x), rotation, (Y, X))
+                self.map[y, x, 1] = rotation/90+1
+                self.map[y, x, 0] = 1
+                for i in [-1, 0, 1]:
                     yo = y+i
                     if yo < 0:
                         yo += Y
                     elif yo >= Y:
                         yo -= Y
-                    for j in [-1,0,1]:
+                    for j in [-1, 0, 1]:
                         xo = x+j
                         if xo < 0:
                             xo += X
                         elif xo >= X:
                             xo -= X
-                        if self.map[yo,xo,0] == -1:
-                            self.map[yo,xo,0] = 0
+                        if self.map[yo, xo, 0] == -1:
+                            self.map[yo, xo, 0] = 0
 
                 if len(players) > 1:
 
@@ -571,9 +603,9 @@ class CleanersPlay:
                     rotation %= 360
 
                     avatar = players[1].avatars[id]
-                    avatar.reset_for_new_game((yf,xf),rotation,(Y,X))
-                    self.map[yf,xf,1] = -(rotation/90+1)
-                    self.map[yf,xf,0] = 1
+                    avatar.reset_for_new_game((yf, xf), rotation, (Y, X))
+                    self.map[yf, xf, 1] = -(rotation/90+1)
+                    self.map[yf, xf, 0] = 1
                     for i in [-1, 0, 1]:
                         yo = yf + i
                         if yo < 0:
@@ -586,13 +618,14 @@ class CleanersPlay:
                                 xo += X
                             elif xo >= X:
                                 xo -= X
-                            if self.map[yo, xo,0] == -1:
-                                self.map[yo, xo,0] = 0
+                            if self.map[yo, xo, 0] == -1:
+                                self.map[yo, xo, 0] = 0
                 break
 
         if self.showGame is not None or self.saveGame:
             vis_cleaners, stats = self.vis_update(players)
-            vis_data = (np.copy(self.map[:,:,0]), np.copy(self.cleaned_by), vis_cleaners, stats)
+            vis_data = (np.copy(self.map[:, :, 0]), np.copy(
+                self.cleaned_by), vis_cleaners, stats)
 
             if self.showGame is not None:
                 self.game.vis.show(vis_data, turn=0, titleStr=self.showGame)
@@ -617,8 +650,8 @@ class CleanersPlay:
                     kj = -1
 
                 for avatar in player.avatars:
-                    y,x = avatar.position
-                    self.map[y,x,1] = kj*(avatar.rotation/90+1)
+                    y, x = avatar.position
+                    self.map[y, x, 1] = kj*(avatar.rotation/90+1)
 
             # Get actions of the agents
             # Reset avatars for a new game
@@ -634,61 +667,66 @@ class CleanersPlay:
                     avatar.active_turns += 1
 
                     # Percepts
-                    percepts = np.zeros((fieldOfVision,fieldOfVision,2)).astype('int')
+                    percepts = np.zeros(
+                        (fieldOfVision, fieldOfVision, 2)).astype('int')
 
                     pBHalf = fieldOfVision // 2
 
                     # Add nearby agents to percepts
 
-                    for i,io in enumerate(range(-pBHalf,pBHalf+1)):
-                        for j,jo in enumerate(range(-pBHalf,pBHalf+1)):
+                    for i, io in enumerate(range(-pBHalf, pBHalf+1)):
+                        for j, jo in enumerate(range(-pBHalf, pBHalf+1)):
                             y, x = avatar.position
                             y += io
                             x += jo
 
-                            y,x = check_coordinate_wraparound(y,x,Y,X)
+                            y, x = check_coordinate_wraparound(y, x, Y, X)
 
-                            percepts[i,j,:] = self.map[y,x,:]
-                    if k==0:
-                        jk=1
+                            percepts[i, j, :] = self.map[y, x, :]
+                    if k == 0:
+                        jk = 1
                     else:
-                        jk=-1
+                        jk = -1
 
-                    percepts[:,:,1] *= jk
-                    y,x = avatar.position
+                    percepts[:, :, 1] *= jk
+                    y, x = avatar.position
 
                     if avatar.energy > 0:
                         gameDone = False
 
-                    percepts= percepts_global_to_agent_frame_of_reference(percepts,avatar.rotation)
+                    percepts = percepts_global_to_agent_frame_of_reference(
+                        percepts, avatar.rotation)
                     ri = int(avatar.rotation/90)
-                    percepts[:,:,1] = np.sign(percepts[:,:,1])*(np.abs(np.abs(percepts[:,:,1])-ri))
+                    percepts[:, :, 1] = np.sign(
+                        percepts[:, :, 1])*(np.abs(np.abs(percepts[:, :, 1])-ri))
 
-                    percepts_sparse = np.zeros((fieldOfVision,fieldOfVision,6)).astype('int')
+                    percepts_sparse = np.zeros(
+                        (fieldOfVision, fieldOfVision, 6)).astype('int')
                     pfield = np.copy(percepts[:, :, 0])
                     pfield[pfield == 1] = 0
-                    percepts_sparse[:,:,0] = pfield
+                    percepts_sparse[:, :, 0] = pfield
                     pfield = np.copy(percepts[:, :, 0])
                     pfield[pfield < 0] = 0
-                    percepts_sparse[:,:,1] = pfield
-                    for i in range(1,5):
+                    percepts_sparse[:, :, 1] = pfield
+                    for i in range(1, 5):
                         pver = np.copy(percepts[:, :, 1])
                         apver = np.abs(pver)
-                        zpver = np.zeros(np.shape(pver),dtype=pver.dtype)
+                        zpver = np.zeros(np.shape(pver), dtype=pver.dtype)
                         zpver[apver == i] = np.sign(pver[apver == i])
-                        percepts_sparse[:,:,i+1] = zpver
+                        percepts_sparse[:, :, i+1] = zpver
 
                     percepts_sparse = percepts_sparse[:pBHalf+1]
-                    percepts_sparse[:,:,2] += percepts_sparse[:,:,4]
-                    percepts_sparse[:,:,3] += percepts_sparse[:,:,5]
+                    percepts_sparse[:, :, 2] += percepts_sparse[:, :, 4]
+                    percepts_sparse[:, :, 3] += percepts_sparse[:, :, 5]
 
-                    percepts_sparse = percepts_sparse[:,:,:4]
+                    percepts_sparse = percepts_sparse[:, :, :4]
 
-                    percepts = (percepts_sparse, avatar.energy, maxBin - avatar.bin, avatar.fails)
+                    percepts = (percepts_sparse, avatar.energy,
+                                maxBin - avatar.bin, avatar.fails)
 
                     # Get action from agent
                     try:
-                        action = avatar.action(turn+1,percepts)
+                        action = avatar.action(turn+1, percepts)
                     except Exception as e:
                         if self.game.in_tournament:
                             self.game.game_scores[k] += [-500]
@@ -704,15 +742,17 @@ class CleanersPlay:
                     ai = np.argmax(action)
 
                     avatar.new_position = avatar.position
-                    if ai == 0 or ai==3:
-                        if ai==3:
-                            y, x = move_on_square_in_direction(y, x, (avatar.rotation+180)%360, Y, X)
+                    if ai == 0 or ai == 3:
+                        if ai == 3:
+                            y, x = move_on_square_in_direction(
+                                y, x, (avatar.rotation+180) % 360, Y, X)
                         else:
-                            y, x = move_on_square_in_direction(y, x, avatar.rotation, Y, X)
+                            y, x = move_on_square_in_direction(
+                                y, x, avatar.rotation, Y, X)
 
-                        avatar.new_position = (y,x)
+                        avatar.new_position = (y, x)
                     elif ai == 1:
-                        #Turn right
+                        # Turn right
                         avatar.rotation += 90
                         avatar.rotation %= 360
                     elif ai == 2:
@@ -732,7 +772,7 @@ class CleanersPlay:
 
                 for i in range(len(all_avatars)):
                     avatar_i = all_avatars[i]
-                    for j in range(i+1,len(all_avatars)):
+                    for j in range(i+1, len(all_avatars)):
                         avatar_j = all_avatars[j]
 
                         if avatar_i.new_position == avatar_j.new_position:
@@ -742,7 +782,7 @@ class CleanersPlay:
                             avatar_j.action_success = 0
                             collisions = True
                         elif avatar_i.new_position == avatar_j.position and avatar_j.new_position == avatar_i.position:
-                            #Can't swap
+                            # Can't swap
                             avatar_i.new_position = avatar_i.position
                             avatar_j.new_position = avatar_j.position
                             avatar_i.action_success = 0
@@ -758,20 +798,20 @@ class CleanersPlay:
                     avatar.fails += 1
 
                 y, x = avatar.new_position
-                avatar.map[y,x] = 1
-                if self.map[y,x,0] == 1:
+                avatar.map[y, x] = 1
+                if self.map[y, x, 0] == 1:
                     avatar.recharge_energy = self.game.maxEnergy-avatar.energy
                     avatar.recharge_count += 1
                     avatar.energy = self.game.maxEnergy
                     avatar.emptied += avatar.bin
                     avatar.bin = 0
-                elif self.map[y,x,0] == -1:
+                elif self.map[y, x, 0] == -1:
                     if avatar.bin < maxBin:
                         avatar.bin += 1
                         avatar.cleaned += 1
-                        self.map[y,x,0] = 0
-                        self.cleaned_by[y,x] = -(2*avatar.player.player-1)
-                avatar.position = (y,x)
+                        self.map[y, x, 0] = 0
+                        self.cleaned_by[y, x] = -(2*avatar.player.player-1)
+                avatar.position = (y, x)
 
             if not self.game.game_play:
                 return None
@@ -779,10 +819,12 @@ class CleanersPlay:
             if self.showGame is not None or self.saveGame:
 
                 vis_cleaners, stats = self.vis_update(players)
-                vis_data = (np.copy(self.map[:,:,0]), np.copy(self.cleaned_by), vis_cleaners, stats)
+                vis_data = (np.copy(self.map[:, :, 0]), np.copy(
+                    self.cleaned_by), vis_cleaners, stats)
 
                 if self.showGame is not None:
-                    self.game.vis.show(vis_data, turn=turn + 1, titleStr=self.showGame)
+                    self.game.vis.show(vis_data, turn=turn +
+                                       1, titleStr=self.showGame)
 
                 if self.saveGame:
                     self.vis_data.append(vis_data)
@@ -794,7 +836,8 @@ class CleanersPlay:
 
         if self.saveGame:
             if self.game.in_tournament:
-                savePath = "/".join(self.game.players[0].playerFile.split('/')[:-1])
+                savePath = "/".join(
+                    self.game.players[0].playerFile.split('/')[:-1])
             else:
                 savePath = "saved"
             if not os.path.isdir(savePath):
@@ -820,7 +863,7 @@ class CleanersPlay:
             self.game.game_saves.append(saveFile)
 
             with gzip.open(saveFile, 'w') as f:
-                pickle.dump((players[0].name, name2, self.vis_data, (Y,X)), f)
+                pickle.dump((players[0].name, name2, self.vis_data, (Y, X)), f)
 
         scores = []
         for k, player in enumerate(players):
@@ -836,12 +879,11 @@ class CleanersPlay:
             return scores[0]-scores[1]
 
 
-
 # Class that runs the entire game
 class CleanersGame:
 
     # Initialises the game
-    def __init__(self, gridSize, nTurns, nChargers, nAgents, saveFinalGames=True,seed=None, tournament=False, verbose=True, training='trained'):
+    def __init__(self, gridSize, nTurns, nChargers, nAgents, saveFinalGames=True, seed=None, tournament=False, verbose=True, training='trained'):
 
         self.rnd = np.random.RandomState()
         self.gridSize = gridSize
@@ -867,29 +909,30 @@ class CleanersGame:
     def errorAndExit(self, errorStr, playerid=None):
         raise RuntimeError(errorStr)
 
-    def errorAndReturn(self, errorStr,playerid=None):
+    def errorAndReturn(self, errorStr, playerid=None):
         signal.alarm(0)
         self.errorStr = errorStr
         return None
 
-
     # Run the game
-    def run(self,player1File, player2File,visResolution=(720,480), visSpeed='normal',savePath="saved",
-            trainers=[("random_agent.py","random")],runs = [1,2,3,4,5], shows = [1,2,3,4,5],jointname=False):
+    def run(self, player1File, player2File, visResolution=(720, 480), visSpeed='normal', savePath="saved",
+            trainers=[("random_agent.py", "random")], runs=[1, 2, 3, 4, 5], shows=[1, 2, 3, 4, 5], jointname=False):
 
         self.players = list()
 
         self.game_messages = ['', '']
-        self.game_scores = [[],[]]
+        self.game_scores = [[], []]
         self.game_saves = list()
 
         # Load player 1
         if player1File is not None:
             try:
-                self.players.append(Player(self,len(self.players),player1File,jointname=jointname))
+                self.players.append(
+                    Player(self, len(self.players), player1File, jointname=jointname))
             except Exception as e:
                 if self.in_tournament:
-                    self.players.append(Player(self,0,player1File,self.nAgents,emptyMode=True))
+                    self.players.append(
+                        Player(self, 0, player1File, self.nAgents, emptyMode=True))
                     self.game_messages[0] = "Error! Failed to create a player with the provided code"
                 else:
                     traceback.print_exc()
@@ -902,7 +945,8 @@ class CleanersGame:
 
                 self.game_play = False
             elif not self.players[0].trained:
-                self.players[0] = self.train(self.players[0],visResolution,visSpeed)
+                self.players[0] = self.train(
+                    self.players[0], visResolution, visSpeed)
                 if self.players[0] is None:
                     self.game_scores[0].append(-500)
                     self.game_play = False
@@ -910,10 +954,12 @@ class CleanersGame:
             # Load player 2
         if player2File is not None:
             try:
-                self.players.append(Player(self,len(self.players),player2File,jointname=jointname))
+                self.players.append(
+                    Player(self, len(self.players), player2File, jointname=jointname))
             except Exception as e:
                 if self.in_tournament:
-                    self.players.append(Player(self,1,player2File,emptyMode=True))
+                    self.players.append(
+                        Player(self, 1, player2File, emptyMode=True))
                     self.game_messages[1] = "Error! Failed to create a player with the provided MyAgent.py code"
                 else:
                     print('Error! ' + str(e))
@@ -926,7 +972,8 @@ class CleanersGame:
 
                 self.game_play = False
             elif not self.players[1].trained:
-                self.players[1] = self.train(self.players[1],visResolution,visSpeed)
+                self.players[1] = self.train(
+                    self.players[1], visResolution, visSpeed)
                 if self.players[1] is None:
                     self.game_scores[1].append(-500)
                     self.game_play = False
@@ -939,10 +986,10 @@ class CleanersGame:
         else:
             saves = []
 
-        self.play(self.players,runs,shows,saves,visResolution,visSpeed,savePath)
+        self.play(self.players, runs, shows, saves,
+                  visResolution, visSpeed, savePath)
 
-
-    def train(self,player,visResolution=(720,480), visSpeed='normal'):
+    def train(self, player, visResolution=(720, 480), visSpeed='normal'):
 
         playerNumber = player.player
         trainingSchedule = player.trainingSchedule
@@ -950,7 +997,6 @@ class CleanersGame:
         tot_gens = 0
         for op, gens in trainingSchedule:
             tot_gens += gens
-
 
         if tot_gens > maxTrainingEpochs:
             tot_gens = maxTrainingEpochs
@@ -962,7 +1008,7 @@ class CleanersGame:
             if gens_count + gens > tot_gens:
                 gens = tot_gens - gens_count
 
-            if gens==0:
+            if gens == 0:
                 break
 
             if op == 'random':
@@ -978,8 +1024,9 @@ class CleanersGame:
             players = [player]
 
             if op == 'self':
-                msg = "\nTraining %s against self for %d generations...\n" % (player.name, gens)
-                #if self.in_tournament:
+                msg = "\nTraining %s against self for %d generations...\n" % (
+                    player.name, gens)
+                # if self.in_tournament:
                 #    self.train_report.append(msg)
 
                 if self.verbose:
@@ -1004,14 +1051,15 @@ class CleanersGame:
                         self.game_messages[player.player] = player.errorMsg
                     return None
 
-                msg = "\nTraining %s against %s for %d generations...\n" % (player.name, op, gens)
+                msg = "\nTraining %s against %s for %d generations...\n" % (
+                    player.name, op, gens)
                 if self.in_tournament:
                     self.train_report.append(msg)
 
                 if self.verbose:
                     sys.stdout.write(msg)
                 players.append(opponent)
-            #else:
+            # else:
             #    msg = "\nTraining %s in single-player mode for %d generations...\n" % (player.name, gens)
             #    if self.in_tournament:
             #        self.train_report.append(msg)
@@ -1024,8 +1072,8 @@ class CleanersGame:
             if self.verbose:
                 sys.stdout.write(msg)
 
-
-            self.play(players,[], [], [], visResolution, visSpeed, trainGames=(gens,gens_count,tot_gens))
+            self.play(players, [], [], [], visResolution, visSpeed,
+                      trainGames=(gens, gens_count, tot_gens))
 
             if not self.game_play:
                 return None
@@ -1046,20 +1094,20 @@ class CleanersGame:
 
         return player
 
-    def play(self,players, run_games, show_games, save_games, visResolution=(720,480), visSpeed='normal',savePath="saved",trainGames=None):
+    def play(self, players, run_games, show_games, save_games, visResolution=(720, 480), visSpeed='normal', savePath="saved", trainGames=None):
 
-        if len(show_games)>0:
+        if len(show_games) > 0:
             import vis_pygame as vis
             playerStrings = []
             for p in players:
                 playerStrings += [p.name]
 
-            if len(players) > 1 and hasattr(self.players[0],'pname') and  hasattr(self.players[1],'pname'):
+            if len(players) > 1 and hasattr(self.players[0], 'pname') and hasattr(self.players[1], 'pname'):
                 for p in players:
                     playerStrings += [p.pname]
 
-            self.vis = vis.visualiser(gridSize=self.players[0].game.gridSize,speed=visSpeed,playerStrings=playerStrings,
-                                  resolution=visResolution)
+            self.vis = vis.visualiser(gridSize=self.players[0].game.gridSize, speed=visSpeed, playerStrings=playerStrings,
+                                      resolution=visResolution)
 
         if trainGames is None:
             nRuns = len(run_games)
@@ -1070,27 +1118,29 @@ class CleanersGame:
         # Play the game a number of times
         for game in range(1, nRuns + 1):
             if trainGames is None:
-                if len(players)==1:
-                    if game==1:
-                        msg = "\nTournament (single-player mode) %s!" % (players[0].name)
+                if len(players) == 1:
+                    if game == 1:
+                        msg = "\nTournament (single-player mode) %s!" % (
+                            players[0].name)
                         if self.in_tournament:
                             self.game_report.append(msg)
 
                         if self.verbose:
                             sys.stdout.write(msg)
                 else:
-                    if game==1:
-                        msg = "\nTournament %s vs. %s!!!" % (players[0].name, players[1].name)
+                    if game == 1:
+                        msg = "\nTournament %s vs. %s!!!" % (
+                            players[0].name, players[1].name)
                         if self.in_tournament:
                             self.game_report.append(msg)
 
                         if self.verbose:
                             sys.stdout.write(msg)
                 msg = "\n    Game %d..." % (game)
-                if self.in_tournament or hasattr(self,'vexcept'):
+                if self.in_tournament or hasattr(self, 'vexcept'):
                     self.game_report.append(msg)
 
-                if self.verbose or hasattr(self,'vexcept'):
+                if self.verbose or hasattr(self, 'vexcept'):
                     sys.stdout.write("\n  Game %d..." % (game))
 
             else:
@@ -1103,8 +1153,9 @@ class CleanersGame:
 
             if trainGames is None and game in show_games:
                 showGame = "Cleaners!"
-                if len(self.players) > 1 and hasattr(self.players[0],'pname') and hasattr(self.players[1],'pname'):
-                    showGame = '%s vs %s, game %d' % (self.players[0].pname, self.players[1].pname, game)
+                if len(self.players) > 1 and hasattr(self.players[0], 'pname') and hasattr(self.players[1], 'pname'):
+                    showGame = '%s vs %s, game %d' % (
+                        self.players[0].pname, self.players[1].pname, game)
             else:
                 showGame = None
 
@@ -1113,7 +1164,7 @@ class CleanersGame:
             else:
                 saveGame = False
 
-            sgame = CleanersPlay(self,showGame,saveGame)
+            sgame = CleanersPlay(self, showGame, saveGame)
             gameResult = sgame.play(players)
 
             if gameResult is None:
@@ -1127,8 +1178,8 @@ class CleanersGame:
             if trainGames is None:
                 score = gameResult
                 if len(players) > 1:
-                    if score>0:
-                        if hasattr(self.players[0],'pname'):
+                    if score > 0:
+                        if hasattr(self.players[0], 'pname'):
                             msg = "won by %s with" % (players[0].pname)
                         else:
                             msg = "won by %s (blue) with" % (players[0].name)
@@ -1136,35 +1187,36 @@ class CleanersGame:
                         if self.in_tournament:
                             self.game_report.append(msg)
 
-                        if self.verbose or hasattr(self,'vexcept'):
+                        if self.verbose or hasattr(self, 'vexcept'):
                             sys.stdout.write(msg)
-                    elif score<0:
-                        if hasattr(self.players[1],'pname'):
+                    elif score < 0:
+                        if hasattr(self.players[1], 'pname'):
                             msg = "won by %s with" % (players[1].pname)
                         else:
                             msg = "won by %s (purlpe) with" % (players[1].name)
                         if self.in_tournament:
                             self.game_report.append(msg)
 
-                        if self.verbose or hasattr(self,'vexcept'):
+                        if self.verbose or hasattr(self, 'vexcept'):
                             sys.stdout.write(msg)
                     else:
                         msg = "tied with"
                         if self.in_tournament:
                             self.game_report.append(msg)
 
-                        if self.verbose or hasattr(self,'vexcept'):
+                        if self.verbose or hasattr(self, 'vexcept'):
                             sys.stdout.write(msg)
 
-                msg = " score=%03d after %d turn" % (np.abs(score),sgame.turn+1)
-                if sgame.turn!=0:
+                msg = " score=%03d after %d turn" % (
+                    np.abs(score), sgame.turn+1)
+                if sgame.turn != 0:
                     msg += "s"
                 msg += "."
 
                 if self.in_tournament:
                     self.game_report.append(msg)
 
-                if self.verbose or hasattr(self,'vexcept'):
+                if self.verbose or hasattr(self, 'vexcept'):
                     sys.stdout.write(msg)
                     sys.stdout.flush()
 
@@ -1194,7 +1246,7 @@ class CleanersGame:
 
     # Play visualisation of a saved game
     @staticmethod
-    def load(loadGame,visResolution=(720,480), visSpeed='normal'):
+    def load(loadGame, visResolution=(720, 480), visSpeed='normal'):
         import vis_pygame as vis
 
         if not os.path.isfile(loadGame):
@@ -1204,7 +1256,7 @@ class CleanersGame:
         # Open the game file and read data
         try:
             with gzip.open(loadGame) as f:
-              (player1Name,player2Name,vis_data,gridSize) = pickle.load(f)
+                (player1Name, player2Name, vis_data, gridSize) = pickle.load(f)
         except:
             print("Error! Failed to load %s." % loadGame)
 
@@ -1214,11 +1266,11 @@ class CleanersGame:
 
         # Create an instance of visualiser
         v = vis.visualiser(gridSize=gridSize, speed=visSpeed, playerStrings=playerStrings,
-                       resolution=visResolution)
+                           resolution=visResolution)
 
         # Show visualisation
         titleStr = "Cleaners! %s" % os.path.basename(loadGame)
-        for t,v_data in enumerate(vis_data):
+        for t, v_data in enumerate(vis_data):
             v.show(v_data, turn=t, titleStr=titleStr)
 
 
@@ -1226,30 +1278,32 @@ def main(argv):
     # Load the defaults
     from settings import game_settings
 
-    if not isinstance(game_settings['gridSize'],tuple):
+    if not isinstance(game_settings['gridSize'], tuple):
         print("Error! Invalid setting for gridSize.  Must be at tuple (Y,X)")
         sys.exit(-1)
-
 
     Y, X = game_settings['gridSize']
     nSquares = Y*X
 
     if nSquares < 25:
-        print("Error! Invalid setting (Y,X)=%s for gridSize.  Y x X must be at least 25" % game_settings['gridSize'])
+        print("Error! Invalid setting (Y,X)=%s for gridSize.  Y x X must be at least 25" %
+              game_settings['gridSize'])
         sys.exit(-1)
 
     gridRegions = nSquares//10
 
     if gridRegions < game_settings['nCleaners']:
-        print("Error! Invalid setup with gridSize=%s and nCleaners=%d settings." %  (game_settings['gridSize'],  game_settings['nCleaners']))
+        print("Error! Invalid setup with gridSize=%s and nCleaners=%d settings." % (
+            game_settings['gridSize'],  game_settings['nCleaners']))
         minGridSize = int(np.ceil(np.sqrt(game_settings['nCleaners']*10)))
         maxCleaners = gridRegions
-        print("Either increase gridSize to %dx%d total squares or reduce nCleaners to %d." %  (minGridSize,minGridSize,  maxCleaners))
+        print("Either increase gridSize to %dx%d total squares or reduce nCleaners to %d." % (
+            minGridSize, minGridSize,  maxCleaners))
         sys.exit(-1)
 
-
     if game_settings['visSpeed'] != 'normal' and game_settings['visSpeed'] != 'fast' and game_settings['visSpeed'] != 'slow':
-        print("Error! Invalid setting '%s' for visualisation speed.  Valid choices are 'slow','normal',fast'" % game_settings['visSpeed'])
+        print("Error! Invalid setting '%s' for visualisation speed.  Valid choices are 'slow','normal',fast'" %
+              game_settings['visSpeed'])
         sys.exit(-1)
 
     if not 'player1' in game_settings and not 'player2' in game_settings:
@@ -1261,20 +1315,18 @@ def main(argv):
     elif not 'player2' in game_settings:
         game_settings['player2'] = None
 
-
-
     # Create a new game and run it
     g = CleanersGame(gridSize=game_settings['gridSize'],
-                nTurns=game_settings['nTurns'],nChargers=game_settings['nCleaners']//2,
-                nAgents=game_settings['nCleaners'],
-                saveFinalGames=game_settings['saveFinalGames'],
-                seed=game_settings['seed'])
+                     nTurns=game_settings['nTurns'], nChargers=game_settings['nCleaners']//2,
+                     nAgents=game_settings['nCleaners'],
+                     saveFinalGames=game_settings['saveFinalGames'],
+                     seed=game_settings['seed'])
 
     g.run(game_settings['player1'],
           game_settings['player2'],
           visResolution=game_settings['visResolution'],
           visSpeed=game_settings['visSpeed'])
 
-if __name__ == "__main__":
-   main(sys.argv[1:])
 
+if __name__ == "__main__":
+    main(sys.argv[1:])

@@ -24,7 +24,9 @@ left_percep = original_array[-1, :2]
 right_percep = original_array[-1, -2:]
 
 
+print(front_percep)
 print(left_percep)
+print(right_percep)
 
 
 # Print the result

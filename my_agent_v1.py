@@ -7,7 +7,8 @@ import random
 
 agentName = "<my_agent>"
 # Train against random agent for 5 generations,
-trainingSchedule = [("random_agent.py", 100), ("self", 50)]
+trainingSchedule = [("random_agent.py", 50), ("self", 50),
+                    ("random_agent.py", 50)]
 # then against self for 1 generation
 
 # This is the class for your cleaner/agent
@@ -152,7 +153,7 @@ def evalFitness(population):
         same_square = stats['visits']
 
         # You can define weights to balance the importance of these objectives
-        weight_cleaned_squares = 13  # new square
+        weight_cleaned_squares = 15  # new square
         weight_emptied_bins = 7
         weight_active_turns = 6
         weight_successful_actions = 4
@@ -306,7 +307,7 @@ def cross_over(parent1, parent2):
 
 
 def mutate(child):
-    mutateLevel = 0.1
+    mutateLevel = 0.09
     random_decimal = round(random.uniform(0, 1), 2)
     if random_decimal < mutateLevel:
         k = random.randint(0, 255)

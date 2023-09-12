@@ -7,8 +7,8 @@ import random
 
 agentName = "<my_agent>"
 # Train against random agent for 5 generations,
-trainingSchedule = [("random_agent.py", 30), ("self", 30),
-                    ("random_agent.py", 30)]
+trainingSchedule = [("random_agent.py", 50), ("self", 50),
+                    ("random_agent.py", 50)]
 # trainingSchedule = [("random_agent.py", 0)]
 # then against self for 1 generation
 

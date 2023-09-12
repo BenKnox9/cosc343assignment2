@@ -7,7 +7,11 @@ import random
 
 agentName = "<my_agent>"
 # Train against random agent for 5 generations,
-trainingSchedule = [("random_agent.py", 30), ("self", 20)]
+trainingSchedule = [("random_agent.py", 50), ("self", 50),
+                    ("random_agent.py", 50)]
+
+
+# trainingSchedule = [("random_agent.py", 0)]
 # then against self for 1 generation
 
 # This is the class for your cleaner/agent
@@ -25,13 +29,12 @@ class Cleaner:
         self.gridSize = gridSize
         self.maxTurns = maxTurns
 
-        # could be in the wrong place, might want it in agent function
         self.chromosome = self.createInitialChromosome()
 
     def createInitialChromosome(self):
-        chromosome = np.empty(25)
+        chromosome = np.empty(21)
 
-        for i in range(25):
+        for i in range(21):
             chromosome[i] = np.random.uniform(-2, 2)
 
         return chromosome
@@ -61,40 +64,24 @@ class Cleaner:
 
         # 3x5 map where -1 indicates dirty square, 0 clean one
         floor_state = visual[:, :, 0]
-        flat_floor_state = floor_state.flatten()
 
         # 3x5 map where 1 indicates the location of energy station, 0 otherwise
         energy_locations = visual[:, :, 1]
-        flat_energy_locations = energy_locations.flatten()
 
         # 3x5 map of bots that can in this turn move up or down (from this bot's point of
         # view), -1 if the bot is an enemy, 1 if it is friendly
         vertical_bots = visual[:, :, 2]
-        flat_vertical_bots = vertical_bots.flatten()
 
         # 3x5 map of bots that can in this turn move up or down (from this bot's point
         # of view), -1 if the bot is an enemy, 1 if it is friendly
         horizontal_bots = visual[:, :, 3]
-        flat_horizontal_bots = horizontal_bots.flatten()
-
-        self.flattenedVisuals = np.concatenate(
-            (flat_floor_state, flat_energy_locations, flat_vertical_bots, flat_horizontal_bots))
-        self.flattenedVisuals = np.concatenate(
-            (self.flattenedVisuals, [energy, bin, fails]))
 
         # You may combine floor_state and energy_locations if you'd like: floor_state + energy_locations would give you
-        floor_plus_energy = floor_state + energy_locations
         # a map where -1 indicates dirty square, 0 a clean one, and 1 an energy station.
 
-        front_percep = floor_plus_energy[0:-1, 1:-1]
-
-        left_column = floor_plus_energy[:, 0]
-        bottom_left_corner = floor_plus_energy[2, 1]
-        left_percep = np.concatenate((left_column, [bottom_left_corner]))
-
-        right_column = floor_plus_energy[:, -1]
-        bottom_right_corner = floor_plus_energy[2, 3]
-        right_percep = np.concatenate((right_column, [bottom_right_corner]))
+        front_percep = floor_state[0:-1, 2]
+        left_percep = floor_state[-1, :2]
+        right_percep = floor_state[-1, -2:]
 
         back_percep = np.array(
             [vertical_bots[0, 2], horizontal_bots[1, 1], horizontal_bots[1, 3]])
@@ -102,36 +89,46 @@ class Cleaner:
         # You should implement a model here that translates from 'percepts' to 'actions'
         # through 'self.chromosome'.
 
-        # TRY ADDING BIAS AFTER NORMALISING
         move_forward_array = np.concatenate(
-            (front_percep.flatten() * self.chromosome[:6], [self.chromosome[6]]))
+            (front_percep.flatten() * self.chromosome[:2], [self.chromosome[2] * energy * bin]))
 
         turn_left_array = np.concatenate(
-            (left_percep * self.chromosome[7:11], [self.chromosome[11]]))
+            (left_percep.flatten() * self.chromosome[5:7], [self.chromosome[7] * energy * bin]))
 
         turn_right_array = np.concatenate(
-            (right_percep * self.chromosome[12:16], [self.chromosome[16]]))
+            (right_percep.flatten() * self.chromosome[8:10], [self.chromosome[10] * energy * bin]))
 
         move_back_array = np.concatenate(
-            (back_percep * self.chromosome[17: 20], [self.chromosome[20]]))
+            (back_percep * self.chromosome[11: 14], [self.chromosome[14] * energy * bin]))
+
+        move_forward_energy_array = energy_locations[:-1, 1:4].flatten() * (
+            (self.chromosome[15]) / energy) * ((self.chromosome[17]) / (bin + 1))
+        turn_right_energy_array = energy_locations[:, -2:].flatten() * (
+            (self.chromosome[15]) / energy) * ((self.chromosome[17]) / (bin + 1))
+        turn_left_energy_array = energy_locations[:, 0:2].flatten() * (
+            (self.chromosome[15]) / energy) * ((self.chromosome[17]) / (bin + 1))
+        move_back_energy_multiplier = self.chromosome[20] * (
+            (self.chromosome[15]) / energy) * ((self.chromosome[17]) / (bin + 1))
 
         action_vector = np.zeros(4)
 
-        action_vector = np.array([np.sum(move_forward_array) +
-                                  np.sum(
-                                      energy_locations[0:-1, 1:-1] * ((self.chromosome[21] * self.chromosome[23]) / energy) * (self.chromosome[24] / (bin + 1))),
-                                  np.sum(turn_right_array) +
-                                  np.sum(energy_locations[:, 0] * ((self.chromosome[21] * self.chromosome[23]) / energy) * (self.chromosome[24] / (bin + 1))) +
-                                  np.sum(
-                                      energy_locations[2, 1] * ((self.chromosome[21] * self.chromosome[23]) / energy) * (self.chromosome[24] / (bin + 1))) +
-                                  self.chromosome[22] * fails,
-                                  np.sum(turn_left_array) +
-                                  np.sum(energy_locations[:, -1] * ((self.chromosome[21] * self.chromosome[23]) / energy) * (self.chromosome[24] / (bin + 1))) +
-                                  np.sum(
-                                      energy_locations[2, 3] * ((self.chromosome[21] * self.chromosome[23]) / energy) * (self.chromosome[24] / (bin + 1))) +
-                                  self.chromosome[22] * fails,
-                                  #   np.sum(move_back_array) + self.chromosome[22] * fails])
-                                  -10])
+        action_vector = np.array([
+            np.sum(move_forward_array) +
+            np.sum(move_forward_energy_array) +
+            self.chromosome[16] * fails,
+
+            np.sum(turn_right_array) +
+            np.sum(turn_right_energy_array) +
+            self.chromosome[18] * fails,
+
+            np.sum(turn_left_array) +
+            np.sum(turn_left_energy_array) +
+            self.chromosome[19] * fails,
+
+            np.sum(move_back_array) +
+            move_back_energy_multiplier +
+            self.chromosome[16] * fails
+        ])
 
         #
         # The 'actions' variable must be returned, and it must be a 4-item list or a 4-dim numpy vector
@@ -180,15 +177,14 @@ def evalFitness(population):
         recharge_energy = stats['recharge_energy']
         different_squares = stats['visits']
 
-        # You can define weights to balance the importance of these objectives
-        weight_cleaned_squares = 15  # new square
+        weight_cleaned_squares = 19
         weight_emptied_bins = 9
         weight_active_turns = 8
         weight_successful_actions = 8
 
         weight_recharge_count = 8
         weight_recharge_energy = 0
-        weight_different_squares = 8  # new square
+        weight_different_squares = 8
 
         if different_squares < 4 or cleaned_squares == 0:
             fitness[n] = 1
@@ -251,7 +247,7 @@ def newGeneration(old_population):
 
     fitness = evalFitness(old_population)
 
-    num_elite = 6  # Number of top-performing individuals to preserve as elite
+    num_elite = 4
     elite_indices = np.argsort(fitness)[-num_elite:]
 
     sum_fitness = sum(fitness)
@@ -271,8 +267,6 @@ def newGeneration(old_population):
         if n in elite_indices:
             new_cleaner.chromosome = old_population[n].chromosome
         else:
-            # Here you should modify the new cleaner' chromosome by selecting two parents (based on their
-            # fitness) and crossing their chromosome to overwrite new_cleaner.chromosome
             newParentsIndices = np.random.choice(
                 len(old_population), size=2, replace=False, p=new_fitness)
             newParent1 = old_population[newParentsIndices[0]].chromosome
@@ -281,13 +275,6 @@ def newGeneration(old_population):
             child = cross_over(newParent1, newParent2)
             mutatedChild = mutate(child)
             new_cleaner.chromosome = mutatedChild
-
-        # Consider implementing elitism, mutation and various other
-        # strategies for producing a new creature.
-
-        # .
-        # .
-        # .
 
         # Add the new cleaner to the new population
         new_population.append(new_cleaner)
@@ -298,46 +285,37 @@ def newGeneration(old_population):
     return (new_population, avg_fitness)
 
 
-# Random selection cross over
-# def cross_over(parent1, parent2):
-#     uniform_crossover = [random.randint(0, 1) for _ in range(len(parent1))]
-#     newChild = []
-#     for i in range(len(parent1)):
-#         if uniform_crossover[i] == 1:
-#             newChild.append(parent1[i])
-#         else:
-#             newChild.append(parent2[i])
-#     return newChild
-
 # Random point cross over
 def cross_over(parent1, parent2):
-    firstSplit = random.randint(0, 24)
-    secondSplit = random.randint(0, 24)
+    num_crossover_points = 1
+    chromosome_length = len(parent1)
+    crossover_points = sorted(random.sample(
+        range(chromosome_length), num_crossover_points))
     newChild = []
 
-    while firstSplit == secondSplit:
-        firstSplit = random.randint(0, 24)
+    current_parent = 1
+    next_crossover_point = 0
 
-    if firstSplit > secondSplit:
-        placeHolder = firstSplit
-        firstSplit = secondSplit
-        secondSplit = placeHolder
+    for i in range(chromosome_length):
+        if next_crossover_point < len(crossover_points) and i == crossover_points[next_crossover_point]:
+            # Switch to the other parent for the next segment
+            current_parent = 3 - current_parent  # Toggle between 1 and 2
+            next_crossover_point += 1
 
-    for i in range(len(parent1)):
-        if i < firstSplit:
+        # Append the gene from the current parent
+        if current_parent == 1:
             newChild.append(parent1[i])
-        elif i < secondSplit:
-            newChild.append(parent2[i])
         else:
-            newChild.append(parent1[i])
+            newChild.append(parent2[i])
+
     return newChild
 
 
 def mutate(child):
-    mutateLevel = 0.05
+    mutateLevel = 0.07
     random_decimal = round(random.uniform(0, 1), 2)
     if random_decimal < mutateLevel:
-        k = random.randint(0, 24)
+        k = random.randint(0, 20)
         v = np.random.uniform(-1, 1)
         child[k] = v
     return child

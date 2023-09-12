@@ -7,8 +7,10 @@ import random
 
 agentName = "<my_agent>"
 # Train against random agent for 5 generations,
-trainingSchedule = [("random_agent.py", 30), ("self", 30),
-                    ("random_agent.py", 30)]
+trainingSchedule = [("random_agent.py", 50), ("self", 50),
+                    ("random_agent.py", 50)]
+
+
 # trainingSchedule = [("random_agent.py", 0)]
 # then against self for 1 generation
 
@@ -78,16 +80,11 @@ class Cleaner:
         floor_plus_energy = floor_state + energy_locations
         # a map where -1 indicates dirty square, 0 a clean one, and 1 an energy station.
 
-        # top_middle = floor_plus_energy[0, 1:4]
-        # middle_value = floor_plus_energy[1, 2]
-        # front_percep = np.concatenate((top_middle, [middle_value]))
-        front_percep = floor_state[0:-1, 2]
 
+        front_percep = floor_state[0:-1, 2]
         left_percep = floor_state[-1, :2]
         right_percep = floor_state[-1, -2:]
 
-        # back_percep = np.array(
-        #     [vertical_bots[0, 2], horizontal_bots[1, 1], horizontal_bots[1, 3]])
         back_percep = np.array(
             [vertical_bots[0, 2], horizontal_bots[1, 1], horizontal_bots[1, 3]])
 
@@ -111,19 +108,20 @@ class Cleaner:
         action_vector = np.array([
             np.sum(move_forward_array) +
             np.sum(
-                energy_locations[:-1, 1:4].flatten() * ((self.chromosome[15]) / energy) * ((self.chromosome[16] * self.chromosome[17]) / (bin + 1))),
+                energy_locations[:-1, 1:4].flatten() * ((self.chromosome[15]) / energy) * ((self.chromosome[17]) / (bin + 1))),
 
             np.sum(turn_right_array) +
             np.sum(
-                energy_locations[:, -2:].flatten() * ((self.chromosome[15]) / energy) * ((self.chromosome[16] * self.chromosome[17]) / (bin + 1))) +
+                energy_locations[:, -2:].flatten() * ((self.chromosome[15]) / energy) * ((self.chromosome[17]) / (bin + 1))) +
             self.chromosome[18] * fails,
 
             np.sum(turn_left_array) +
             np.sum(
-                energy_locations[:, 0:2].flatten() * ((self.chromosome[15]) / energy) * ((self.chromosome[16] * self.chromosome[17]) / (bin + 1))) +
+                energy_locations[:, 0:2].flatten() * ((self.chromosome[15]) / energy) * ((self.chromosome[17]) / (bin + 1))) +
             self.chromosome[19] * fails,
 
-            np.sum(move_back_array) + self.chromosome[20]
+            np.sum(move_back_array) + self.chromosome[20] * (
+                (self.chromosome[15]) / energy) * ((self.chromosome[17]) / (bin + 1))
         ])
 
         #
@@ -173,15 +171,14 @@ def evalFitness(population):
         recharge_energy = stats['recharge_energy']
         different_squares = stats['visits']
 
-        # You can define weights to balance the importance of these objectives
-        weight_cleaned_squares = 19  # new square
+        weight_cleaned_squares = 19  
         weight_emptied_bins = 9
         weight_active_turns = 8
         weight_successful_actions = 8
 
         weight_recharge_count = 8
         weight_recharge_energy = 0
-        weight_different_squares = 8  # new square
+        weight_different_squares = 8  
 
         if different_squares < 4 or cleaned_squares == 0:
             fitness[n] = 1
