@@ -7,8 +7,8 @@ import random
 
 agentName = "<my_agent>"
 # Train against random agent for 5 generations,
-trainingSchedule = [("random_agent.py", 50), ("self", 50),
-                    ("random_agent.py", 50)]
+trainingSchedule = [("random_agent.py", 0), ("self", 0),
+                    ("random_agent.py", 0)]
 # then against self for 1 generation
 
 # This is the class for your cleaner/agent

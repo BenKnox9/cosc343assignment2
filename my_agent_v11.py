@@ -80,7 +80,6 @@ class Cleaner:
         floor_plus_energy = floor_state + energy_locations
         # a map where -1 indicates dirty square, 0 a clean one, and 1 an energy station.
 
-
         front_percep = floor_state[0:-1, 2]
         left_percep = floor_state[-1, :2]
         right_percep = floor_state[-1, -2:]
@@ -120,11 +119,12 @@ class Cleaner:
                 energy_locations[:, 0:2].flatten() * ((self.chromosome[15]) / energy) * ((self.chromosome[17]) / (bin + 1))) +
             self.chromosome[19] * fails,
 
-            np.sum(move_back_array) + self.chromosome[20] * (
-                (self.chromosome[15]) / energy) * ((self.chromosome[17]) / (bin + 1))
+            np.sum(move_back_array) +
+            self.chromosome[20] * ((self.chromosome[15]) /
+                                   energy) * ((self.chromosome[17]) / (bin + 1))
         ])
 
-        #
+
         # The 'actions' variable must be returned, and it must be a 4-item list or a 4-dim numpy vector
 
         # The index of the largest value in the 'actions' vector/list is the action to be taken,
@@ -171,14 +171,14 @@ def evalFitness(population):
         recharge_energy = stats['recharge_energy']
         different_squares = stats['visits']
 
-        weight_cleaned_squares = 19  
+        weight_cleaned_squares = 19
         weight_emptied_bins = 9
         weight_active_turns = 8
         weight_successful_actions = 8
 
         weight_recharge_count = 8
         weight_recharge_energy = 0
-        weight_different_squares = 8  
+        weight_different_squares = 8
 
         if different_squares < 4 or cleaned_squares == 0:
             fitness[n] = 1

@@ -6,8 +6,8 @@ import numpy as np
 import random
 
 agentName = "<my_agent>"
-trainingSchedule = [("random_agent.py", 80), ("self", 80),
-                    ("random_agent.py", 80), ("self", 80), ("random_agent.py", 80)]
+trainingSchedule = [("random_agent.py", 60), ("self", 60),
+                    ("random_agent.py", 60)]
 
 
 class Cleaner:
@@ -103,8 +103,7 @@ class Cleaner:
             (self.chromosome[15]) / energy) * ((self.chromosome[17]) / (bin + 1))
         turn_left_energy_array = energy_locations[:, 0:2].flatten() * (
             (self.chromosome[15]) / energy) * ((self.chromosome[17]) / (bin + 1))
-        move_back_energy_multiplier = self.chromosome[20] * (
-            (self.chromosome[15]) / energy) * ((self.chromosome[17]) / (bin + 1))
+        move_back_energy_multiplier = self.chromosome[20]
 
         action_vector = np.zeros(4)
 
